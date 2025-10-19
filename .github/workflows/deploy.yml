@@ -1,0 +1,185 @@
+name: Deploy Frontend to VM
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy:
+    name: Build and Deploy Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      # ========================================
+      # CHECKOUT CODE
+      # ========================================
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ========================================
+      # SETUP NODE.JS
+      # ========================================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ========================================
+      # BUILD FRONTEND
+      # ========================================
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Verify build exists
+        run: |
+          if [ ! -d dist ]; then
+            echo "ERROR: Frontend build not found!"
+            exit 1
+          fi
+          echo "Frontend build size: $(du -sh dist)"
+          echo "Build contents:"
+          ls -lh dist/
+
+      # ========================================
+      # CREATE DEPLOYMENT PACKAGE
+      # ========================================
+      - name: Create deployment package
+        run: |
+          mkdir -p deploy-package
+          
+          # Copy frontend build
+          cp -r dist deploy-package/frontend
+          
+          echo "Deployment package created"
+          ls -lh deploy-package/
+
+      # ========================================
+      # SETUP SSH
+      # ========================================
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
+
+      # ========================================
+      # UPLOAD TO VM
+      # ========================================
+      - name: Upload to VM
+        run: |
+          rsync -avz --delete -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            deploy-package/ \
+            ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}:/tmp/frontend-deploy/
+
+      # ========================================
+      # DEPLOY ON VM
+      # ========================================
+      - name: Deploy frontend on VM
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'ENDSSH'
+          
+          set -e
+          
+          echo "========================================="
+          echo "Deploying Frontend"
+          echo "========================================="
+          
+          # Create backup
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          BACKUP_DIR="/opt/cryptotrader/backups/frontend_backup_${TIMESTAMP}"
+          
+          if [ -d "/opt/cryptotrader/frontend" ]; then
+            echo "Creating backup..."
+            sudo mkdir -p "$BACKUP_DIR"
+            sudo cp -r /opt/cryptotrader/frontend/* "$BACKUP_DIR/" || true
+            echo "✅ Backup created: $BACKUP_DIR"
+          fi
+          
+          # Deploy new frontend
+          echo "Deploying new frontend..."
+          sudo mkdir -p /opt/cryptotrader/frontend
+          sudo rm -rf /opt/cryptotrader/frontend/*
+          sudo cp -r /tmp/frontend-deploy/frontend/* /opt/cryptotrader/frontend/
+          sudo chown -R www-data:www-data /opt/cryptotrader/frontend
+          
+          echo "✅ Frontend deployed"
+          
+          # Test nginx configuration
+          echo "Testing nginx configuration..."
+          sudo nginx -t
+          
+          # Reload nginx
+          echo "Reloading nginx..."
+          sudo systemctl reload nginx
+          
+          echo "✅ Nginx reloaded"
+          
+          # Cleanup old backups (keep last 5)
+          echo "Cleaning up old backups..."
+          cd /opt/cryptotrader/backups/
+          ls -t | grep "^frontend_backup_" | tail -n +6 | xargs -r sudo rm -rf
+          
+          # Cleanup temp files
+          rm -rf /tmp/frontend-deploy
+          
+          echo "========================================="
+          echo "✅ Frontend Deployment Complete!"
+          echo "========================================="
+          
+          ENDSSH
+
+      # ========================================
+      # VERIFY DEPLOYMENT
+      # ========================================
+      - name: Verify frontend is accessible
+        run: |
+          echo "Waiting 5 seconds for nginx to settle..."
+          sleep 5
+          
+          echo "Testing frontend accessibility..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.VM_HOST }}/)
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Frontend is accessible (HTTP $HTTP_CODE)"
+          else
+            echo "❌ Frontend returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+      # ========================================
+      # DEPLOYMENT SUCCESS
+      # ========================================
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "========================================="
+          echo "✅ DEPLOYMENT SUCCESSFUL"
+          echo "========================================="
+          echo "Frontend URL: http://${{ secrets.VM_HOST }}/"
+          echo "Deployed at: $(date)"
+          echo "========================================="
+
+      # ========================================
+      # DEPLOYMENT FAILURE
+      # ========================================
+      - name: Deployment failed
+        if: failure()
+        run: |
+          echo "========================================="
+          echo "❌ DEPLOYMENT FAILED"
+          echo "========================================="
+          echo "Check the logs above for details"
+          echo "You may need to SSH to the VM to investigate:"
+          echo "  ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}"
+          echo "  sudo journalctl -u nginx -n 50"
+          echo "  sudo tail -f /var/log/nginx/cryptotrader-frontend-error.log"
+          echo "========================================="
+
