@@ -132,3 +132,127 @@ export const fetchCyclePositions = async (cycleId) => {
     throw new Error('Failed to fetch cycle positions')
   }
 }
+
+/**
+ * Fetch price ticks (raw price updates every 3 seconds)
+ * @param {string} mint - Token mint address (default: SOL)
+ * @param {number} limit - Number of ticks to fetch (default: 100)
+ * @returns {Promise<Array>} Array of price tick data
+ */
+export const fetchPriceTicks = async (mint = SOL_MINT, limit = 100) => {
+  try {
+    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/price/ticks/${mint}`, {
+      params: { limit }
+    })
+
+    // Transform tick data to our format
+    // Sort by timestamp ascending (oldest first)
+    const sortedData = response.data.sort((a, b) =>
+      new Date(a.tickTime).getTime() - new Date(b.tickTime).getTime()
+    )
+
+    return sortedData.map(tick => ({
+      time: new Date(tick.tickTime).getTime() / 1000, // Convert to seconds
+      price: tick.price,
+      tickTimeIso: tick.tickTimeIso
+    }))
+  } catch (error) {
+    console.error('Error fetching price ticks:', error)
+    throw new Error('Failed to fetch price ticks')
+  }
+}
+
+/**
+ * Fetch 15-second candles
+ * @param {string} mint - Token mint address (default: SOL)
+ * @param {number} limit - Number of candles to fetch (default: 240 = 1 hour)
+ * @returns {Promise<Array>} Array of 15-second candle data
+ */
+export const fetch15SecCandles = async (mint = SOL_MINT, limit = 240) => {
+  try {
+    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/price/candles-15sec/${mint}`, {
+      params: { limit }
+    })
+
+    // Transform 15-sec candle data to our format
+    // Sort by timestamp ascending (oldest first)
+    const sortedData = response.data.sort((a, b) =>
+      new Date(a.time).getTime() - new Date(b.time).getTime()
+    )
+
+    return sortedData.map(candle => ({
+      time: new Date(candle.time).getTime() / 1000, // Convert to seconds
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close,
+      numberOfTicks: candle.numberOfTicks,
+      complete: candle.complete,
+      timeIso: candle.timeIso
+    }))
+  } catch (error) {
+    console.error('Error fetching 15-second candles:', error)
+    throw new Error('Failed to fetch 15-second candles')
+  }
+}
+
+/**
+ * Fetch price ticks in a time range
+ * @param {string} mint - Token mint address
+ * @param {number} startTime - Start timestamp (Unix seconds)
+ * @param {number} endTime - End timestamp (Unix seconds)
+ * @returns {Promise<Array>} Array of price tick data
+ */
+export const fetchPriceTicksRange = async (mint = SOL_MINT, startTime, endTime) => {
+  try {
+    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/price/ticks/${mint}/range`, {
+      params: { startTime, endTime }
+    })
+
+    const sortedData = response.data.sort((a, b) =>
+      new Date(a.tickTime).getTime() - new Date(b.tickTime).getTime()
+    )
+
+    return sortedData.map(tick => ({
+      time: new Date(tick.tickTime).getTime() / 1000,
+      price: tick.price,
+      tickTimeIso: tick.tickTimeIso
+    }))
+  } catch (error) {
+    console.error('Error fetching price ticks range:', error)
+    throw new Error('Failed to fetch price ticks range')
+  }
+}
+
+/**
+ * Fetch 15-second candles in a time range
+ * @param {string} mint - Token mint address
+ * @param {number} startTime - Start timestamp (Unix seconds)
+ * @param {number} endTime - End timestamp (Unix seconds)
+ * @returns {Promise<Array>} Array of 15-second candle data
+ */
+export const fetch15SecCandlesRange = async (mint = SOL_MINT, startTime, endTime) => {
+  try {
+    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/price/candles-15sec/${mint}/range`, {
+      params: { startTime, endTime }
+    })
+
+    const sortedData = response.data.sort((a, b) =>
+      new Date(a.time).getTime() - new Date(b.time).getTime()
+    )
+
+    return sortedData.map(candle => ({
+      time: new Date(candle.time).getTime() / 1000,
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close,
+      numberOfTicks: candle.numberOfTicks,
+      complete: candle.complete,
+      timeIso: candle.timeIso
+    }))
+  } catch (error) {
+    console.error('Error fetching 15-second candles range:', error)
+    throw new Error('Failed to fetch 15-second candles range')
+  }
+}

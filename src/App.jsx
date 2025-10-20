@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import CandlestickChart from './components/CandlestickChart'
 import RechartsCandles from './components/RechartsCandles'
 import EChartsCandles from './components/EChartsCandles'
+import MultiResolutionChart from './components/MultiResolutionChart'
 import CyclesPanel from './components/CyclesPanel'
 import StrategyManager from './components/StrategyManager'
 import WalletManager from './components/WalletManager'
@@ -56,7 +57,7 @@ function App() {
   const [cycles, setCycles] = useState([]) // Shared cycles state
   const [selectedPositions, setSelectedPositions] = useState([]) // Positions to visualize on chart
   const [selectedStrategy, setSelectedStrategy] = useState(null) // Currently selected strategy
-  const [chartType, setChartType] = useState('echarts') // 'tradingview', 'recharts', or 'echarts'
+  const [chartType, setChartType] = useState('multiresolution') // 'tradingview', 'recharts', 'echarts', or 'multiresolution'
   const [activeTab, setActiveTab] = useState('chart') // 'chart' or 'strategies'
   const [strategies, setStrategies] = useState([])
   const [strategiesLoading, setStrategiesLoading] = useState(false)
@@ -180,7 +181,17 @@ function App() {
 
       {activeTab === 'chart' ? (
         <>
-          {chartType === 'echarts' ? (
+          {chartType === 'multiresolution' ? (
+            <MultiResolutionChart
+              selectedMAs={selectedMAs}
+              setSelectedMAs={setSelectedMAs}
+              cycles={cycles}
+              selectedPositions={selectedPositions}
+              selectedStrategy={selectedStrategy}
+              candleLimit={candleLimit}
+              setCandleLimit={setCandleLimit}
+            />
+          ) : chartType === 'echarts' ? (
             <EChartsCandles
               selectedMAs={selectedMAs}
               setSelectedMAs={setSelectedMAs}
