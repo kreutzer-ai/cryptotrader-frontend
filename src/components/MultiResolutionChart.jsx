@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef, useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { fetchCandles, fetchPriceTicks, fetch15SecCandles } from '../services/cryptotraderApi'
 import './MultiResolutionChart.css'
@@ -18,6 +18,27 @@ const MultiResolutionChart = ({
   const [lastUpdate, setLastUpdate] = useState(null)
   const [stats, setStats] = useState(null)
   const [resolution, setResolution] = useState('1min') // '1min', '15sec', 'tick'
+  const [selectedPosition, setSelectedPosition] = useState(null) // For showing threshold lines
+  const [showPositions, setShowPositions] = useState(true) // Toggle position markers visibility
+  const [showCandles, setShowCandles] = useState(true) // Toggle candle/line visibility
+  const chartRef = useRef(null)
+  const prevDataRef = useRef(null)
+
+  // MA management
+  const handleAddMA = (period) => {
+    if (period && !selectedMAs.includes(period)) {
+      setSelectedMAs([...selectedMAs, period].sort((a, b) => a - b))
+    }
+  }
+
+  const handleRemoveMA = (period) => {
+    setSelectedMAs(selectedMAs.filter(p => p !== period))
+  }
+
+  const getAvailableMAPeriods = () => {
+    const allPeriods = Array.from({ length: 200 }, (_, i) => i + 1)
+    return allPeriods.filter(p => !selectedMAs.includes(p))
+  }
 
   // Resolution-specific presets
   const getPresetLimits = () => {
@@ -193,8 +214,220 @@ const MultiResolutionChart = ({
     return () => clearInterval(interval)
   }, [resolution, candleLimit])
 
-  // Prepare ECharts option
-  const getOption = () => {
+  // Prepare cycle markAreas
+  const prepareMarkAreas = useMemo(() => {
+    if (!showPositions) return []
+    return cycles.map(cycle => {
+      const startTime = new Date(cycle.startTime).getTime()
+      const endTime = cycle.endTime ? new Date(cycle.endTime).getTime() : Date.now()
+
+      let fillColor = 'rgba(74, 144, 226, 0.03)'
+      let borderColor = 'rgba(74, 144, 226, 0.4)'
+
+      if (cycle.status === 'ACTIVE') {
+        fillColor = 'rgba(46, 125, 50, 0.04)'
+        borderColor = 'rgba(46, 125, 50, 0.5)'
+      } else if (cycle.status === 'CLOSED_PROFIT') {
+        fillColor = 'rgba(25, 118, 210, 0.03)'
+        borderColor = 'rgba(25, 118, 210, 0.4)'
+      } else if (cycle.status === 'CLOSED_DURATION') {
+        fillColor = 'rgba(245, 124, 0, 0.03)'
+        borderColor = 'rgba(245, 124, 0, 0.4)'
+      } else if (cycle.status === 'FAILED') {
+        fillColor = 'rgba(198, 40, 40, 0.03)'
+        borderColor = 'rgba(198, 40, 40, 0.4)'
+      }
+
+      return [
+        {
+          name: `${cycle.cycleNumber}`,
+          xAxis: startTime,
+          itemStyle: {
+            color: fillColor,
+            borderColor: borderColor,
+            borderWidth: 1,
+            borderType: 'solid'
+          }
+        },
+        {
+          xAxis: endTime
+        }
+      ]
+    })
+  }, [cycles, showPositions])
+
+  // Prepare position markers
+  const preparePositionMarkers = useMemo(() => {
+    if (!showPositions) return []
+    return selectedPositions.flatMap(pos => {
+      const markers = []
+
+      // Entry marker
+      if (pos.openTime && pos.entryPrice) {
+        markers.push({
+          name: `${pos.direction} Entry`,
+          coord: [new Date(pos.openTime).getTime(), pos.entryPrice],
+          value: `${pos.direction}\n$${pos.entryPrice.toFixed(2)}`,
+          symbol: pos.direction === 'LONG' ? 'triangle' : 'triangle',
+          symbolSize: 12,
+          symbolRotate: pos.direction === 'LONG' ? 0 : 180,
+          itemStyle: {
+            color: pos.direction === 'LONG' ? '#2e7d32' : '#c62828',
+            borderColor: '#ffffff',
+            borderWidth: 2
+          },
+          label: {
+            show: true,
+            position: pos.direction === 'LONG' ? 'bottom' : 'top',
+            formatter: '{b}',
+            fontSize: 10,
+            color: pos.direction === 'LONG' ? '#2e7d32' : '#c62828',
+            fontWeight: 600
+          },
+          positionId: pos.id // Store position ID for click handling
+        })
+      }
+
+      // Exit marker (if closed)
+      if (pos.closeTime && pos.exitPrice) {
+        const isProfitable = (pos.realizedPnl || 0) >= 0
+        markers.push({
+          name: `${pos.direction} Exit`,
+          coord: [new Date(pos.closeTime).getTime(), pos.exitPrice],
+          value: `Exit\n$${pos.exitPrice.toFixed(2)}`,
+          symbol: 'circle',
+          symbolSize: 10,
+          itemStyle: {
+            color: isProfitable ? '#1976d2' : '#f57c00',
+            borderColor: '#ffffff',
+            borderWidth: 2
+          },
+          label: {
+            show: true,
+            position: 'top',
+            formatter: `{b}\n${isProfitable ? '+' : ''}$${(pos.realizedPnl || 0).toFixed(2)}`,
+            fontSize: 9,
+            color: isProfitable ? '#1976d2' : '#f57c00',
+            fontWeight: 600
+          },
+          positionId: pos.id // Store position ID for click handling
+        })
+      }
+
+      return markers
+    })
+  }, [selectedPositions, showPositions])
+
+  // Prepare threshold lines for selected position
+  const prepareThresholdLines = useMemo(() => {
+    const thresholdLines = []
+
+    if (!showPositions) return []
+
+    if (selectedPosition && selectedStrategy) {
+      const feePercent = 0.16 // 0.16% fee
+      const profitTargetPercent = (selectedStrategy.profitThreshold * 100) // Convert to percentage
+      const leverage = selectedStrategy.leverage || 1
+
+      // Divide profit target by leverage
+      const priceMovementPercent = profitTargetPercent / leverage
+      const totalTargetPercent = feePercent + priceMovementPercent
+
+      const entryPrice = selectedPosition.entryPrice
+
+      // Calculate threshold prices based on direction
+      let feeThresholdPrice, profitThresholdPrice
+      if (selectedPosition.direction === 'LONG') {
+        feeThresholdPrice = entryPrice * (1 + feePercent / 100)
+        profitThresholdPrice = entryPrice * (1 + totalTargetPercent / 100)
+      } else {
+        feeThresholdPrice = entryPrice * (1 - feePercent / 100)
+        profitThresholdPrice = entryPrice * (1 - totalTargetPercent / 100)
+      }
+
+      // Entry price line
+      thresholdLines.push({
+        name: 'Entry Price',
+        yAxis: entryPrice,
+        label: {
+          show: true,
+          formatter: `Entry: $${entryPrice.toFixed(4)}`,
+          position: 'insideEndTop',
+          fontSize: 10,
+          color: '#666',
+          fontWeight: 600
+        },
+        lineStyle: {
+          color: '#666',
+          width: 2,
+          type: 'solid'
+        }
+      })
+
+      // Fee threshold line
+      thresholdLines.push({
+        name: 'Fee Threshold',
+        yAxis: feeThresholdPrice,
+        label: {
+          show: true,
+          formatter: `Fee (${feePercent}%): $${feeThresholdPrice.toFixed(4)}`,
+          position: 'insideEndTop',
+          fontSize: 10,
+          color: '#f57c00',
+          fontWeight: 600
+        },
+        lineStyle: {
+          color: '#f57c00',
+          width: 2,
+          type: 'dashed'
+        }
+      })
+
+      // Profit target line
+      thresholdLines.push({
+        name: 'Profit Target',
+        yAxis: profitThresholdPrice,
+        label: {
+          show: true,
+          formatter: `Target (${profitTargetPercent.toFixed(2)}% ÷ ${leverage}x = ${totalTargetPercent.toFixed(2)}%): $${profitThresholdPrice.toFixed(4)}`,
+          position: 'insideEndTop',
+          fontSize: 10,
+          color: '#2e7d32',
+          fontWeight: 600
+        },
+        lineStyle: {
+          color: '#2e7d32',
+          width: 2,
+          type: 'dashed'
+        }
+      })
+    }
+
+    // Position connect lines (entry to exit)
+    const positionConnectLines = selectedPositions
+      .filter(pos => pos.openTime && pos.closeTime && pos.entryPrice && pos.exitPrice)
+      .map(pos => {
+        const isProfitable = (pos.realizedPnl || 0) >= 0
+        return [
+          {
+            coord: [new Date(pos.openTime).getTime(), pos.entryPrice]
+          },
+          {
+            coord: [new Date(pos.closeTime).getTime(), pos.exitPrice],
+            lineStyle: {
+              color: isProfitable ? '#1976d2' : '#f57c00',
+              width: 2,
+              type: 'dashed'
+            }
+          }
+        ]
+      })
+
+    return [...positionConnectLines, ...thresholdLines]
+  }, [selectedPositions, selectedPosition, selectedStrategy, showPositions])
+
+  // Prepare ECharts option with memoization to prevent unnecessary recalculations
+  const chartOption = useMemo(() => {
     if (!chartData || chartData.length === 0) return {}
 
     const isTick = resolution === 'tick'
@@ -203,16 +436,13 @@ const MultiResolutionChart = ({
     if (isTick) {
       // Line chart for price ticks
       return {
-        title: {
-          text: 'SOL/USD Price Ticks (3-second intervals)',
-          left: 'center',
-          textStyle: { color: '#e0e0e0', fontSize: 16 }
-        },
+        animation: false,
+        backgroundColor: '#fff',
         tooltip: {
           trigger: 'axis',
-          backgroundColor: 'rgba(50, 50, 50, 0.95)',
-          borderColor: '#777',
-          textStyle: { color: '#fff' },
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          borderColor: '#ccc',
+          textStyle: { color: '#333' },
           formatter: (params) => {
             const data = params[0]
             const date = new Date(data.value[0])
@@ -228,29 +458,29 @@ const MultiResolutionChart = ({
           left: '3%',
           right: '3%',
           bottom: '15%',
-          top: '10%',
+          top: '3%',
           containLabel: true
         },
         xAxis: {
           type: 'time',
           axisLabel: {
-            color: '#999',
+            color: '#666',
             formatter: (value) => {
               const date = new Date(value)
               return date.toLocaleTimeString()
             }
           },
-          axisLine: { lineStyle: { color: '#444' } }
+          axisLine: { lineStyle: { color: '#ddd' } }
         },
         yAxis: {
           type: 'value',
           scale: true,
           axisLabel: {
-            color: '#999',
+            color: '#666',
             formatter: (value) => `$${value.toFixed(2)}`
           },
-          axisLine: { lineStyle: { color: '#444' } },
-          splitLine: { lineStyle: { color: '#333' } }
+          axisLine: { lineStyle: { color: '#ddd' } },
+          splitLine: { lineStyle: { color: '#f0f0f0' } }
         },
         dataZoom: [
           {
@@ -263,10 +493,10 @@ const MultiResolutionChart = ({
             start: 0,
             end: 100,
             bottom: '5%',
-            textStyle: { color: '#999' },
-            borderColor: '#444',
-            fillerColor: 'rgba(47, 69, 84, 0.25)',
-            handleStyle: { color: '#666' }
+            textStyle: { color: '#666' },
+            borderColor: '#ddd',
+            fillerColor: 'rgba(33, 150, 243, 0.15)',
+            handleStyle: { color: '#999' }
           }
         ],
         series: [
@@ -288,6 +518,17 @@ const MultiResolutionChart = ({
                   { offset: 1, color: 'rgba(33, 150, 243, 0.05)' }
                 ]
               }
+            },
+            markArea: {
+              silent: true,
+              data: prepareMarkAreas
+            },
+            markPoint: {
+              data: preparePositionMarkers
+            },
+            markLine: {
+              symbol: 'none',
+              data: prepareThresholdLines
             }
           }
         ]
@@ -296,9 +537,12 @@ const MultiResolutionChart = ({
 
     // Candlestick chart for 15-sec or 1-min candles
     const ohlcData = chartData.map(c => [c.time, c.open, c.close, c.low, c.high])
-    
-    const series = [
-      {
+
+    const series = []
+
+    // Only add candlestick series if showCandles is true
+    if (showCandles) {
+      series.push({
         name: is15Sec ? '15-sec Candles' : '1-min Candles',
         type: 'candlestick',
         data: ohlcData,
@@ -307,9 +551,20 @@ const MultiResolutionChart = ({
           color0: '#ef5350',
           borderColor: '#26a69a',
           borderColor0: '#ef5350'
+        },
+        markArea: {
+          silent: true,
+          data: prepareMarkAreas
+        },
+        markPoint: {
+          data: preparePositionMarkers
+        },
+        markLine: {
+          symbol: 'none',
+          data: prepareThresholdLines
         }
-      }
-    ]
+      })
+    }
 
     // Add MA lines only for 1-min candles
     if (!is15Sec && selectedMAs && selectedMAs.length > 0) {
@@ -327,44 +582,36 @@ const MultiResolutionChart = ({
     }
 
     return {
-      title: {
-        text: is15Sec ? 'SOL/USD 15-Second Candles' : 'SOL/USD 1-Minute Candles',
-        left: 'center',
-        textStyle: { color: '#e0e0e0', fontSize: 16 }
-      },
+      animation: false,
+      backgroundColor: '#fff',
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'cross' },
-        backgroundColor: 'rgba(50, 50, 50, 0.95)',
-        borderColor: '#777',
-        textStyle: { color: '#fff' }
-      },
-      legend: {
-        data: series.map(s => s.name),
-        top: '5%',
-        textStyle: { color: '#999' }
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderColor: '#ccc',
+        textStyle: { color: '#333' }
       },
       grid: {
         left: '3%',
         right: '3%',
         bottom: '15%',
-        top: '15%',
+        top: '3%',
         containLabel: true
       },
       xAxis: {
         type: 'time',
-        axisLabel: { color: '#999' },
-        axisLine: { lineStyle: { color: '#444' } }
+        axisLabel: { color: '#666' },
+        axisLine: { lineStyle: { color: '#ddd' } }
       },
       yAxis: {
         type: 'value',
         scale: true,
         axisLabel: {
-          color: '#999',
+          color: '#666',
           formatter: (value) => `$${value.toFixed(2)}`
         },
-        axisLine: { lineStyle: { color: '#444' } },
-        splitLine: { lineStyle: { color: '#333' } }
+        axisLine: { lineStyle: { color: '#ddd' } },
+        splitLine: { lineStyle: { color: '#f0f0f0' } }
       },
       dataZoom: [
         { type: 'inside', start: 0, end: 100 },
@@ -373,105 +620,176 @@ const MultiResolutionChart = ({
           start: 0,
           end: 100,
           bottom: '5%',
-          textStyle: { color: '#999' },
-          borderColor: '#444'
+          textStyle: { color: '#666' },
+          borderColor: '#ddd'
         }
       ],
       series
     }
-  }
+  }, [chartData, resolution, selectedMAs, showCandles, prepareMarkAreas, preparePositionMarkers, prepareThresholdLines])
 
   return (
     <div className="multi-resolution-chart">
-      {/* Resolution Selector */}
+      {/* Combined Controls Bar */}
       <div className="resolution-controls">
-        <div className="resolution-buttons">
-          <button
-            className={resolution === '1min' ? 'active' : ''}
-            onClick={() => handleResolutionChange('1min')}
+        {/* Resolution Selector */}
+        <div className="resolution-selector">
+          <label>Chart Type:</label>
+          <select
+            value={resolution}
+            onChange={(e) => handleResolutionChange(e.target.value)}
+            className="resolution-dropdown"
           >
-            1-Minute Candles
-          </button>
-          <button
-            className={resolution === '15sec' ? 'active' : ''}
-            onClick={() => handleResolutionChange('15sec')}
-          >
-            15-Second Candles
-          </button>
-          <button
-            className={resolution === 'tick' ? 'active' : ''}
-            onClick={() => handleResolutionChange('tick')}
-          >
-            Price Ticks (3s)
-          </button>
+            <option value="1min">1-Minute Candles</option>
+            <option value="15sec">15-Second Candles</option>
+            <option value="tick">Price Ticks (3s)</option>
+          </select>
         </div>
 
         {/* Limit Controls */}
         <div className="limit-controls">
           <label>Data Points:</label>
-          <input
-            type="number"
+          <select
             value={candleLimit}
-            onChange={handleLimitChange}
-            min="10"
-            max="10000"
-          />
-          <div className="preset-buttons">
+            onChange={(e) => setCandleLimit(Number(e.target.value))}
+            className="limit-dropdown"
+          >
             {getPresetLimits().map(preset => (
-              <button
-                key={preset.label}
-                onClick={() => setCandleLimit(preset.value)}
-                className={candleLimit === preset.value ? 'active' : ''}
-              >
+              <option key={preset.value} value={preset.value}>
                 {preset.label}
-              </button>
+              </option>
             ))}
-          </div>
+          </select>
         </div>
-      </div>
 
-      {/* Stats Display */}
-      {stats && (
-        <div className="chart-stats">
-          <div className="stat">
-            <span className="label">Current Price:</span>
-            <span className="value">${stats.currentPrice?.toFixed(4)}</span>
+        {/* MA Selector - Only show for 1-min candles */}
+        {resolution === '1min' && (
+          <div className="ma-selector">
+            <label>Add MA:</label>
+            <select
+              value=""
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleAddMA(Number(e.target.value))
+                  e.target.value = ''
+                }
+              }}
+              className="ma-dropdown"
+            >
+              <option value="">Select MA</option>
+              {getAvailableMAPeriods().map(period => (
+                <option key={period} value={period}>MA{period}</option>
+              ))}
+            </select>
           </div>
-          <div className="stat">
-            <span className="label">Change:</span>
-            <span className={`value ${stats.priceChange >= 0 ? 'positive' : 'negative'}`}>
-              {stats.priceChange >= 0 ? '+' : ''}${stats.priceChange?.toFixed(4)} 
-              ({stats.priceChangePercent >= 0 ? '+' : ''}{stats.priceChangePercent?.toFixed(2)}%)
-            </span>
+        )}
+
+        {/* MA Chips - Only show for 1-min candles */}
+        {resolution === '1min' && selectedMAs && selectedMAs.length > 0 && (
+          <div className="ma-chips">
+            {selectedMAs.map((period, index) => {
+              const colors = ['#1976d2', '#f57c00', '#388e3c', '#d32f2f', '#7b1fa2']
+              const color = colors[index % colors.length]
+              return (
+                <div
+                  key={period}
+                  className="ma-chip"
+                  style={{ borderColor: color, color: color }}
+                >
+                  <span>MA{period}</span>
+                  <button
+                    className="ma-remove-btn"
+                    onClick={() => handleRemoveMA(period)}
+                    title={`Remove MA${period}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              )
+            })}
           </div>
-          <div className="stat">
-            <span className="label">Data Points:</span>
-            <span className="value">{stats.dataPoints}</span>
-          </div>
-          {stats.avgTicksPerCandle && (
-            <div className="stat">
-              <span className="label">Avg Ticks/Candle:</span>
-              <span className="value">{stats.avgTicksPerCandle.toFixed(1)}</span>
-            </div>
-          )}
-          {lastUpdate && (
-            <div className="stat">
-              <span className="label">Last Update:</span>
-              <span className="value">{lastUpdate.toLocaleTimeString()}</span>
-            </div>
-          )}
+        )}
+
+        {/* Candle Toggle */}
+        <div className="candle-toggle">
+          <button
+            className={showCandles ? 'active' : ''}
+            onClick={() => setShowCandles(!showCandles)}
+            title={showCandles ? 'Hide candles' : 'Show candles'}
+          >
+            {showCandles ? 'Hide Candles' : 'Show Candles'}
+          </button>
         </div>
-      )}
+
+        {/* Position Toggle */}
+        <div className="position-toggle">
+          <button
+            className={showPositions ? 'active' : ''}
+            onClick={() => {
+              console.log('Toggle button clicked. Current showPositions:', showPositions)
+              setShowPositions(!showPositions)
+              console.log('New showPositions will be:', !showPositions)
+            }}
+            title={showPositions ? 'Hide positions' : 'Show positions'}
+          >
+            {showPositions ? 'Hide Positions' : 'Show Positions'}
+          </button>
+        </div>
+
+        {/* Stats Display - Inline */}
+        {stats && (
+          <div className="stats-inline">
+            <span className="stat-item">
+              <span className="label">Price:</span>
+              <span className="value">${stats.currentPrice?.toFixed(4)}</span>
+            </span>
+            <span className="stat-item">
+              <span className="label">Change:</span>
+              <span className={`value ${stats.priceChange >= 0 ? 'positive' : 'negative'}`}>
+                {stats.priceChange >= 0 ? '+' : ''}${stats.priceChange?.toFixed(4)}
+                ({stats.priceChangePercent >= 0 ? '+' : ''}{stats.priceChangePercent?.toFixed(2)}%)
+              </span>
+            </span>
+            {lastUpdate && (
+              <span className="stat-item">
+                <span className="label">Updated:</span>
+                <span className="value">{lastUpdate.toLocaleTimeString()}</span>
+              </span>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Chart */}
       {loading && <div className="loading">Loading chart data...</div>}
       {error && <div className="error">Error: {error}</div>}
       {!loading && !error && chartData.length > 0 && (
-        <ReactECharts
-          option={getOption()}
-          style={{ height: '600px', width: '100%' }}
-          theme="dark"
+        <div style={{ padding: '0 10px' }}>
+          <ReactECharts
+            ref={chartRef}
+            option={chartOption}
+            style={{ height: '600px', width: '100%' }}
+            notMerge={false}
+            lazyUpdate={false}
+            opts={{ renderer: 'canvas' }}
+          onEvents={{
+            click: (params) => {
+              // Handle click on position markers
+              if (params.componentType === 'markPoint' && params.data && params.data.positionId) {
+                const clickedPosition = selectedPositions.find(p => p.id === params.data.positionId)
+                if (clickedPosition) {
+                  // Toggle selection - if same position clicked, deselect
+                  if (selectedPosition && selectedPosition.id === clickedPosition.id) {
+                    setSelectedPosition(null)
+                  } else {
+                    setSelectedPosition(clickedPosition)
+                  }
+                }
+              }
+            }
+          }}
         />
+        </div>
       )}
     </div>
   )

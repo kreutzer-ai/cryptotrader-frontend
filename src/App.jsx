@@ -139,7 +139,7 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>SOL/USD Trading Dashboard</h1>
+        <h1>SOL/USD Trader</h1>
 
         <div className="header-controls">
           {/* Tab Navigation */}

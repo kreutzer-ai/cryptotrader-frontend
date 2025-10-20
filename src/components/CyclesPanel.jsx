@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { fetchCycles } from '../services/cryptotraderApi'
+import CycleDetailsOverlay from './CycleDetailsOverlay'
 import './CyclesPanel.css'
 
 const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, initialStrategy, strategies = [], strategiesLoading = false }) => {
@@ -7,8 +8,7 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
   const [cycles, setCycles] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [expandedCycle, setExpandedCycle] = useState(null)
-  const [cycleHistoryExpanded, setCycleHistoryExpanded] = useState(true)
+  const [showOverlay, setShowOverlay] = useState(false)
   const [cyclePositions, setCyclePositions] = useState({})
 
   console.log('CyclesPanel rendering - strategies:', strategies.length, 'cycles:', cycles.length, 'loading:', loading, 'error:', error, 'initialStrategy:', initialStrategy)
@@ -80,18 +80,12 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
     }
   }
 
-  const toggleCycleExpand = async (cycleId) => {
-    const newExpandedCycle = expandedCycle === cycleId ? null : cycleId
-    setExpandedCycle(newExpandedCycle)
-
-    // Load positions for this cycle if expanding and not already loaded
-    if (newExpandedCycle && !cyclePositions[cycleId]) {
-      await loadCyclePositions(cycleId)
-    }
+  const handleOpenOverlay = () => {
+    setShowOverlay(true)
   }
 
-  const toggleCycleHistory = () => {
-    setCycleHistoryExpanded(!cycleHistoryExpanded)
+  const handleCloseOverlay = () => {
+    setShowOverlay(false)
   }
 
   const loadCyclePositions = async (cycleId) => {
@@ -226,10 +220,10 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
   }
 
   return (
-    <div className="cycles-panel">
-      <div className="cycles-header">
-        <h2>Strategies</h2>
-        <div className="strategy-selector">
+    <>
+      <div className="cycles-panel-bottom">
+        <div className="strategy-selector-section">
+          <label>Strategy:</label>
           <select
             id="strategy-select"
             onChange={handleStrategySelect}
@@ -237,7 +231,7 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
             disabled={strategiesLoading || loading || strategies.length === 0}
           >
             <option value="">
-              {strategiesLoading ? 'Loading strategies...' : strategies.length === 0 ? 'No strategies' : 'Select strategy...'}
+              {strategiesLoading ? 'Loading...' : strategies.length === 0 ? 'No strategies' : 'Select...'}
             </option>
             {strategies.map(strategy => (
               <option key={strategy.id} value={strategy.id}>
@@ -246,257 +240,57 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
             ))}
           </select>
         </div>
+
+        {!loading && !error && selectedStrategy && cycles.length > 0 && (
+          <>
+            <div className="strategy-summary-compact">
+              <div className="summary-stat">
+                <span className="stat-label">P&L:</span>
+                <span className={`stat-value ${calculateTotalPnL() >= 0 ? 'positive' : 'negative'}`}>
+                  {calculateTotalPnL() >= 0 ? '+' : ''}${calculateTotalPnL().toFixed(2)}
+                </span>
+              </div>
+              <div className="summary-stat">
+                <span className="stat-label">Cycles:</span>
+                <span className="stat-value">{cycles.length}</span>
+              </div>
+              <div className="summary-stat">
+                <span className="stat-label">Active:</span>
+                <span className="stat-value">{calculateActiveCycles()}</span>
+              </div>
+              <div className="summary-stat">
+                <span className="stat-label">Profitable:</span>
+                <span className="stat-value">{calculateProfitableCycles()}/{calculateClosedCycles()}</span>
+              </div>
+              <div className="summary-stat">
+                <span className="stat-label">Leverage:</span>
+                <span className="stat-value">{selectedStrategy.leverage}x</span>
+              </div>
+              <div className="summary-stat">
+                <span className="stat-label">Target:</span>
+                <span className="stat-value">{(selectedStrategy.profitThreshold * 100).toFixed(1)}%</span>
+              </div>
+            </div>
+
+            <button className="view-cycles-btn" onClick={handleOpenOverlay}>
+              ▶ Cycles ({cycles.length})
+            </button>
+          </>
+        )}
+
       </div>
 
-      {loading && (
-        <div className="cycles-loading">
-          <div className="spinner"></div>
-          <p>Loading...</p>
-        </div>
+      {showOverlay && cycles.length > 0 && (
+        <CycleDetailsOverlay
+          cycles={cycles}
+          cyclePositions={cyclePositions}
+          onClose={handleCloseOverlay}
+          selectedStrategy={selectedStrategy}
+          onVisualizePositions={handleVisualizePositions}
+          onLoadPositions={loadCyclePositions}
+        />
       )}
-
-      {error && (
-        <div className="cycles-error">
-          <p>❌ Error: {error}</p>
-        </div>
-      )}
-
-      {!loading && !error && selectedStrategy && cycles.length > 0 && (
-        <div className="strategy-summary">
-          <div className="summary-main">
-            <div className="summary-item summary-name">
-              <span className="summary-label">Strategy</span>
-              <span className="summary-value">{selectedStrategy.strategyName}</span>
-            </div>
-            <div className="summary-item summary-pnl">
-              <span className="summary-label">Total P&L</span>
-              <span className={`summary-value ${calculateTotalPnL() >= 0 ? 'positive' : 'negative'}`}>
-                {calculateTotalPnL() >= 0 ? '+' : ''}${calculateTotalPnL().toFixed(2)}
-              </span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-label">Leverage</span>
-              <span className="summary-value">{selectedStrategy.leverage}x</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-label">Profit Target</span>
-              <span className="summary-value">{(selectedStrategy.profitThreshold * 100).toFixed(2)}%</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-label">Cycles</span>
-              <span className="summary-value">{cycles.length}</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-label">Active</span>
-              <span className="summary-value active-count">{calculateActiveCycles()}</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-label">Profitable</span>
-              <span className="summary-value">{calculateProfitableCycles()}/{calculateClosedCycles()}</span>
-            </div>
-          </div>
-          <div className="summary-config">
-            <span>MA{selectedStrategy.shortMaPeriod}/{selectedStrategy.longMaPeriod}</span>
-            <span>{(selectedStrategy.profitThreshold * 100).toFixed(1)}% target</span>
-            <span className={selectedStrategy.enabled ? 'status-enabled' : 'status-disabled'}>
-              {selectedStrategy.enabled ? 'Enabled' : 'Disabled'}
-            </span>
-            {selectedStrategy.testMode && <span className="status-test">Test Mode</span>}
-          </div>
-        </div>
-      )}
-
-      {!loading && !error && cycles.length === 0 && selectedStrategy && (
-        <div className="cycles-empty">
-          <p>No cycles found for this strategy.</p>
-        </div>
-      )}
-
-      {!loading && !error && cycles.length > 0 && (
-        <div className="cycles-list">
-          <div className="cycles-list-header" onClick={toggleCycleHistory}>
-            <span>Cycle History ({cycles.length})</span>
-            <span className="accordion-icon">{cycleHistoryExpanded ? '▼' : '▶'}</span>
-          </div>
-
-          {cycleHistoryExpanded && cycles.map(cycle => (
-            <div key={cycle.id} className="cycle-card">
-              <div className="cycle-header" onClick={() => toggleCycleExpand(cycle.id)}>
-                <div className="cycle-title">
-                  <span className="cycle-number">#{cycle.cycleNumber}</span>
-                  <span className="cycle-id">(ID: {cycle.id})</span>
-                  <span className={`cycle-status-badge ${getStatusColor(cycle.status)}`}>
-                    {cycle.status === 'ACTIVE' ? 'Active' :
-                     cycle.status === 'WAITING' ? 'Waiting' :
-                     cycle.status === 'CLOSED_PROFIT' ? 'Profit' :
-                     cycle.status === 'CLOSED_DURATION' ? 'Duration' :
-                     cycle.status === 'CLOSED_MANUAL' ? 'Manual' : 'Failed'}
-                  </span>
-                </div>
-                <div className="cycle-summary-stats">
-                  <span className={`cycle-pnl ${cycle.netPnl >= 0 ? 'positive' : 'negative'}`}>
-                    {cycle.netPnl >= 0 ? '+' : ''}${cycle.netPnl?.toFixed(2) || '0.00'}
-                  </span>
-                  <span className="cycle-positions">
-                    {cycle.closedPositions || 0} pos
-                  </span>
-                  <span className="cycle-duration">
-                    {formatDuration(calculateDuration(cycle.startTime, cycle.endTime))}
-                  </span>
-                  <span className="expand-icon">{expandedCycle === cycle.id ? '▼' : '▶'}</span>
-                </div>
-              </div>
-
-              {expandedCycle === cycle.id && (
-                <div className="cycle-details">
-                  <div className="detail-section">
-                    <h4>Timeline</h4>
-                    <div className="detail-grid">
-                      <div className="detail-item">
-                        <span className="detail-label">Started:</span>
-                        <span className="detail-value">{formatDate(cycle.startTime)}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Status:</span>
-                        <span className="detail-value">{cycle.status}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Duration:</span>
-                        <span className="detail-value">
-                          {formatDuration(calculateDuration(cycle.startTime, cycle.endTime))}
-                          {cycle.maxDuration && ` / ${cycle.maxDuration}m max`}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="detail-section">
-                    <h4>Performance</h4>
-                    <div className="detail-grid">
-                      <div className="detail-item">
-                        <span className="detail-label">Starting Balance:</span>
-                        <span className="detail-value">${cycle.startingBalance?.toFixed(2)}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Total Invested:</span>
-                        <span className="detail-value">${cycle.totalInvested?.toFixed(2)}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Net PnL:</span>
-                        <span className={`detail-value ${cycle.netPnl >= 0 ? 'positive' : 'negative'}`}>
-                          {cycle.netPnl >= 0 ? '+' : ''}${cycle.netPnl?.toFixed(2)}
-                          ({calculatePnlPercent(cycle.netPnl, cycle.startingBalance) >= 0 ? '+' : ''}
-                          {calculatePnlPercent(cycle.netPnl, cycle.startingBalance).toFixed(2)}%)
-                        </span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Leverage:</span>
-                        <span className="detail-value">{cycle.leverage}x</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="detail-section">
-                    <h4>Position Summary</h4>
-                    <div className="detail-grid">
-                      <div className="detail-item">
-                        <span className="detail-label">Total:</span>
-                        <span className="detail-value">{cycle.totalPositions || 0}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Open:</span>
-                        <span className="detail-value">{cycle.openPositions || 0}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Closed:</span>
-                        <span className="detail-value">{cycle.closedPositions || 0}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Long Invested:</span>
-                        <span className="detail-value positive">${cycle.totalInvestedLong?.toFixed(2) || '0.00'}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Short Invested:</span>
-                        <span className="detail-value negative">${cycle.totalInvestedShort?.toFixed(2) || '0.00'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {cyclePositions[cycle.id] && cyclePositions[cycle.id].length > 0 && (
-                    <div className="detail-section positions-list">
-                      <div className="positions-header">
-                        <h4>Position Details ({cyclePositions[cycle.id].length})</h4>
-                        <button
-                          className="visualize-btn"
-                          onClick={() => handleVisualizePositions(cycle.id)}
-                          title="Show positions on chart"
-                        >
-                          📊 Show on Chart
-                        </button>
-                      </div>
-                      <div className="positions-table-wrapper">
-                        <table className="positions-table">
-                          <thead>
-                            <tr>
-                              <th>Direction</th>
-                              <th>Open Time</th>
-                              <th>Close Time</th>
-                              <th>Entry Price</th>
-                              <th>Exit Price</th>
-                              <th>Size</th>
-                              <th>P&L</th>
-                              <th>P&L %</th>
-                              <th>Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {cyclePositions[cycle.id].map((pos, idx) => (
-                              <tr key={pos.id || idx}>
-                                <td>
-                                  <span className={`position-direction ${pos.direction?.toLowerCase()}`}>
-                                    {pos.direction || 'N/A'}
-                                  </span>
-                                </td>
-                                <td className="position-time">
-                                  {formatTimestamp(pos.openTime)}
-                                </td>
-                                <td className="position-time">
-                                  {formatTimestamp(pos.closeTime)}
-                                </td>
-                                <td className="position-price">
-                                  ${pos.entryPrice?.toFixed(4) || 'N/A'}
-                                </td>
-                                <td className="position-price">
-                                  {pos.exitPrice ? `$${pos.exitPrice.toFixed(4)}` : '-'}
-                                </td>
-                                <td className="position-size">
-                                  ${pos.positionSize?.toFixed(2) || 'N/A'}
-                                </td>
-                                <td className={`position-pnl ${(pos.realizedPnl || 0) >= 0 ? 'positive' : 'negative'}`}>
-                                  {pos.realizedPnl != null ? `${pos.realizedPnl >= 0 ? '+' : ''}$${pos.realizedPnl.toFixed(2)}` : '-'}
-                                </td>
-                                <td className={`position-pnl-percent ${(pos.realizedPnlPercent || 0) >= 0 ? 'positive' : 'negative'}`}>
-                                  {pos.realizedPnlPercent != null ? `${pos.realizedPnlPercent >= 0 ? '+' : ''}${pos.realizedPnlPercent.toFixed(2)}%` : '-'}
-                                </td>
-                                <td>
-                                  <span className={`position-status ${pos.status?.toLowerCase()}`}>
-                                    {pos.status || 'N/A'}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    </>
   )
 }
 
