@@ -149,8 +149,8 @@ const CycleDetailsOverlay = ({ cycles, cyclePositions, onClose, selectedStrategy
                 <span className="detail-label">Net PnL:</span>
                 <span className={`detail-value ${cycle.netPnl >= 0 ? 'positive' : 'negative'}`}>
                   {cycle.netPnl >= 0 ? '+' : ''}${cycle.netPnl?.toFixed(2)}
-                  ({calculatePnlPercent(cycle.netPnl, cycle.startingBalance) >= 0 ? '+' : ''}
-                  {calculatePnlPercent(cycle.netPnl, cycle.startingBalance).toFixed(2)}%)
+                  ({calculatePnlPercent(cycle.netPnl, cycle.totalInvested) >= 0 ? '+' : ''}
+                  {calculatePnlPercent(cycle.netPnl, cycle.totalInvested).toFixed(2)}%)
                 </span>
               </div>
               <div className="detail-item">

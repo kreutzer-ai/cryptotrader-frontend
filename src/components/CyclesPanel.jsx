@@ -357,7 +357,7 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
               </div>
               <div className="summary-stat">
                 <span className="stat-label">Target:</span>
-                <span className="stat-value">{(selectedStrategy.profitThreshold * 100).toFixed(1)}%</span>
+                <span className="stat-value">{(selectedStrategy.profitThreshold * 100).toFixed(3)}%</span>
               </div>
               <div className="summary-stat">
                 <span className="stat-label">Rate/h:</span>
