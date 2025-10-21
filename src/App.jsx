@@ -7,10 +7,15 @@ import CyclesPanel from './components/CyclesPanel'
 import StrategyManager from './components/StrategyManager'
 import WalletManager from './components/WalletManager'
 import LiquidationCurveOverlay from './components/LiquidationCurveOverlay'
+import Login from './components/Login'
 import { fetchStrategies } from './services/cryptotraderApi'
+import { isAuthenticated, isProduction, logout, getUsername } from './services/authService'
 import './App.css'
 
 function App() {
+  // Authentication state
+  const [authenticated, setAuthenticated] = useState(false)
+  const [checkingAuth, setCheckingAuth] = useState(true)
   // Initialize from URL params or use defaults
   const getInitialMAs = () => {
     const params = new URLSearchParams(window.location.search)
@@ -64,10 +69,30 @@ function App() {
   const [strategiesLoading, setStrategiesLoading] = useState(false)
   const [showLiquidationOverlay, setShowLiquidationOverlay] = useState(false)
 
-  // Load strategies on mount
+  // Check authentication on mount
   useEffect(() => {
-    loadStrategies()
+    const checkAuth = () => {
+      if (!isProduction()) {
+        // Development: skip authentication
+        console.log('Development mode - authentication disabled')
+        setAuthenticated(true)
+        setCheckingAuth(false)
+      } else {
+        // Production: check authentication
+        console.log('Production mode - checking authentication')
+        setAuthenticated(isAuthenticated())
+        setCheckingAuth(false)
+      }
+    }
+    checkAuth()
   }, [])
+
+  // Load strategies on mount (only if authenticated)
+  useEffect(() => {
+    if (authenticated) {
+      loadStrategies()
+    }
+  }, [authenticated])
 
   const loadStrategies = async () => {
     setStrategiesLoading(true)
@@ -138,6 +163,22 @@ function App() {
     window.history.replaceState({}, '', newUrl)
   }, [selectedMAs, candleLimit, selectedStrategy])
 
+  // Show loading screen while checking authentication
+  if (checkingAuth) {
+    return (
+      <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <h2>Loading...</h2>
+        </div>
+      </div>
+    )
+  }
+
+  // Show login screen if not authenticated
+  if (!authenticated) {
+    return <Login onLogin={() => setAuthenticated(true)} />
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -183,6 +224,17 @@ function App() {
               />
               <span className="checkbox-label">Show Strategies</span>
             </label>
+          )}
+
+          {/* Logout button - only show in production */}
+          {isProduction() && (
+            <button
+              className="logout-btn"
+              onClick={logout}
+              title={`Logged in as ${getUsername()}`}
+            >
+              Logout
+            </button>
           )}
         </div>
       </header>

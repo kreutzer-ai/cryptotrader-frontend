@@ -105,6 +105,27 @@
   user-select: none;
 }
 
+.logout-btn {
+  background: #ef5350;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.logout-btn:hover {
+  background: #e53935;
+}
+
+.logout-btn:active {
+  background: #d32f2f;
+}
+
 @media (max-width: 768px) {
   .app {
     padding: 10px;

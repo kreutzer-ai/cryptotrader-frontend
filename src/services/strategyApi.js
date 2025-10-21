@@ -1,7 +1,11 @@
 import axios from 'axios'
+import { getAuthHeader } from './authService'
 
 const STRATEGY_API_BASE = '/api/strategy/v1'
 const WALLET_API_BASE = '/api/wallet/v1'
+
+// Note: axios interceptor is already configured in cryptotraderApi.js
+// which is imported globally, so auth headers will be included automatically
 
 /**
  * Fetch all wallets

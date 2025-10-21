@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { fetchCycles } from '../services/cryptotraderApi'
+import { getAuthHeader } from '../services/authService'
 import CycleDetailsOverlay from './CycleDetailsOverlay'
 import './CyclesPanel.css'
 
@@ -69,7 +70,9 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
   const loadActiveCycleValue = async (cycleId) => {
     try {
       console.log('Loading active cycle value for cycle:', cycleId)
-      const response = await fetch(`/api/cryptotrader/v1/cycles/${cycleId}/current-value`)
+      const response = await fetch(`/api/cryptotrader/v1/cycles/${cycleId}/current-value`, {
+        headers: getAuthHeader()
+      })
       if (!response.ok) {
         console.error('Failed to load active cycle current value, status:', response.status)
         return
@@ -135,7 +138,9 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
 
   const loadCyclePositions = async (cycleId) => {
     try {
-      const response = await fetch(`/api/cryptotrader/v1/cycles/${cycleId}/positions`)
+      const response = await fetch(`/api/cryptotrader/v1/cycles/${cycleId}/positions`, {
+        headers: getAuthHeader()
+      })
       if (!response.ok) {
         console.error('Failed to load positions for cycle', cycleId)
         return
