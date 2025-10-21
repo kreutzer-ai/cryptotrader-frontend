@@ -68,12 +68,14 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
 
   const loadActiveCycleValue = async (cycleId) => {
     try {
+      console.log('Loading active cycle value for cycle:', cycleId)
       const response = await fetch(`http://localhost:8080/api/cryptotrader/v1/cycles/${cycleId}/current-value`)
       if (!response.ok) {
-        console.error('Failed to load active cycle current value')
+        console.error('Failed to load active cycle current value, status:', response.status)
         return
       }
       const data = await response.json()
+      console.log('Active cycle value loaded:', data)
       setActiveCycleValue(data)
     } catch (err) {
       console.error('Error loading active cycle value:', err)
@@ -369,22 +371,18 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
                   {calculateProfitRatePerDay() >= 0 ? '+' : ''}{calculateProfitRatePerDay().toFixed(2)}%
                 </span>
               </div>
-              {activeCycleValue && (
-                <>
-                  <div className="summary-stat">
-                    <span className="stat-label">Current Cycle:</span>
-                    <span className={`stat-value ${getCurrentCyclePnl() >= 0 ? 'positive' : 'negative'}`}>
-                      {getCurrentCyclePnl() >= 0 ? '+' : ''}${getCurrentCyclePnl().toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="summary-stat">
-                    <span className="stat-label">Current %:</span>
-                    <span className={`stat-value ${getCurrentCyclePnlPercent() >= 0 ? 'positive' : 'negative'}`}>
-                      {getCurrentCyclePnlPercent() >= 0 ? '+' : ''}{getCurrentCyclePnlPercent().toFixed(2)}%
-                    </span>
-                  </div>
-                </>
-              )}
+              <div className="summary-stat">
+                <span className="stat-label">Current Cycle:</span>
+                <span className={`stat-value ${getCurrentCyclePnl() >= 0 ? 'positive' : 'negative'}`}>
+                  {getCurrentCyclePnl() >= 0 ? '+' : ''}${getCurrentCyclePnl().toFixed(2)}
+                </span>
+              </div>
+              <div className="summary-stat">
+                <span className="stat-label">Current %:</span>
+                <span className={`stat-value ${getCurrentCyclePnlPercent() >= 0 ? 'positive' : 'negative'}`}>
+                  {getCurrentCyclePnlPercent() >= 0 ? '+' : ''}{getCurrentCyclePnlPercent().toFixed(2)}%
+                </span>
+              </div>
             </div>
 
             <button className="view-cycles-btn" onClick={handleOpenOverlay}>
