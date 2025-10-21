@@ -10,6 +10,7 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
   const [error, setError] = useState(null)
   const [showOverlay, setShowOverlay] = useState(false)
   const [cyclePositions, setCyclePositions] = useState({})
+  const [activeCycleValue, setActiveCycleValue] = useState(null)
 
   console.log('CyclesPanel rendering - strategies:', strategies.length, 'cycles:', cycles.length, 'loading:', loading, 'error:', error, 'initialStrategy:', initialStrategy)
 
@@ -50,6 +51,13 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
       if (onCyclesChange) {
         onCyclesChange(sorted)
       }
+      // Load active cycle current value if there's an active cycle
+      const activeCycle = sorted.find(c => c.status === 'ACTIVE' || c.status === 'WAITING')
+      if (activeCycle) {
+        loadActiveCycleValue(activeCycle.id)
+      } else {
+        setActiveCycleValue(null)
+      }
       setLoading(false)
     } catch (err) {
       console.error('Error loading cycles:', err)
@@ -57,6 +65,41 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
       setLoading(false)
     }
   }
+
+  const loadActiveCycleValue = async (cycleId) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/cryptotrader/v1/cycles/${cycleId}/current-value`)
+      if (!response.ok) {
+        console.error('Failed to load active cycle current value')
+        return
+      }
+      const data = await response.json()
+      setActiveCycleValue(data)
+    } catch (err) {
+      console.error('Error loading active cycle value:', err)
+    }
+  }
+
+  // Poll active cycle value every 10 seconds
+  useEffect(() => {
+    if (!selectedStrategy || cycles.length === 0) return
+
+    const activeCycle = cycles.find(c => c.status === 'ACTIVE' || c.status === 'WAITING')
+    if (!activeCycle) {
+      setActiveCycleValue(null)
+      return
+    }
+
+    // Initial load
+    loadActiveCycleValue(activeCycle.id)
+
+    // Set up polling
+    const interval = setInterval(() => {
+      loadActiveCycleValue(activeCycle.id)
+    }, 10000) // Poll every 10 seconds
+
+    return () => clearInterval(interval)
+  }, [selectedStrategy, cycles])
 
   const handleStrategySelect = (e) => {
     const strategyId = parseInt(e.target.value)
@@ -182,6 +225,50 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
     return cycle.netPnl / duration
   }
 
+  // Calculate profit rate per hour in percent
+  const calculateProfitRatePerHour = () => {
+    if (cycles.length === 0) return 0
+
+    // Calculate total duration in hours across all cycles
+    let totalDurationHours = 0
+    let totalPnl = 0
+
+    cycles.forEach(cycle => {
+      const durationMinutes = calculateDuration(cycle.startTime, cycle.endTime)
+      if (durationMinutes && durationMinutes > 0) {
+        totalDurationHours += durationMinutes / 60
+        totalPnl += (cycle.netPnl || 0)
+      }
+    })
+
+    if (totalDurationHours === 0) return 0
+
+    // Calculate average starting balance
+    const avgStartingBalance = cycles.reduce((sum, c) => sum + (c.startingBalance || 0), 0) / cycles.length
+    if (avgStartingBalance === 0) return 0
+
+    // Profit per hour as percentage of average starting balance
+    const profitPerHour = totalPnl / totalDurationHours
+    return (profitPerHour / avgStartingBalance) * 100
+  }
+
+  // Calculate profit rate per day in percent
+  const calculateProfitRatePerDay = () => {
+    return calculateProfitRatePerHour() * 24
+  }
+
+  // Get current cycle PnL (in dollars)
+  const getCurrentCyclePnl = () => {
+    if (!activeCycleValue) return 0
+    return activeCycleValue.totalPnl || 0
+  }
+
+  // Get current cycle PnL percent
+  const getCurrentCyclePnlPercent = () => {
+    if (!activeCycleValue) return 0
+    return (activeCycleValue.totalPnlPercent || 0) * 100
+  }
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'ACTIVE':
@@ -270,6 +357,34 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
                 <span className="stat-label">Target:</span>
                 <span className="stat-value">{(selectedStrategy.profitThreshold * 100).toFixed(1)}%</span>
               </div>
+              <div className="summary-stat">
+                <span className="stat-label">Rate/h:</span>
+                <span className={`stat-value ${calculateProfitRatePerHour() >= 0 ? 'positive' : 'negative'}`}>
+                  {calculateProfitRatePerHour() >= 0 ? '+' : ''}{calculateProfitRatePerHour().toFixed(4)}%
+                </span>
+              </div>
+              <div className="summary-stat">
+                <span className="stat-label">Rate/d:</span>
+                <span className={`stat-value ${calculateProfitRatePerDay() >= 0 ? 'positive' : 'negative'}`}>
+                  {calculateProfitRatePerDay() >= 0 ? '+' : ''}{calculateProfitRatePerDay().toFixed(2)}%
+                </span>
+              </div>
+              {activeCycleValue && (
+                <>
+                  <div className="summary-stat">
+                    <span className="stat-label">Current Cycle:</span>
+                    <span className={`stat-value ${getCurrentCyclePnl() >= 0 ? 'positive' : 'negative'}`}>
+                      {getCurrentCyclePnl() >= 0 ? '+' : ''}${getCurrentCyclePnl().toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="summary-stat">
+                    <span className="stat-label">Current %:</span>
+                    <span className={`stat-value ${getCurrentCyclePnlPercent() >= 0 ? 'positive' : 'negative'}`}>
+                      {getCurrentCyclePnlPercent() >= 0 ? '+' : ''}{getCurrentCyclePnlPercent().toFixed(2)}%
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             <button className="view-cycles-btn" onClick={handleOpenOverlay}>
