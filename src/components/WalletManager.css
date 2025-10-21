@@ -1,7 +1,10 @@
 .wallet-manager {
   padding: 20px;
-  max-width: 1400px;
+  max-width: 100%;
   margin: 0 auto;
+  height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
 }
 
 .wallet-manager-header {
@@ -11,6 +14,7 @@
   margin-bottom: 20px;
   padding-bottom: 16px;
   border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
 }
 
 .wallet-manager-header h2 {
@@ -59,6 +63,7 @@
   justify-content: space-between;
   align-items: center;
   font-size: 0.85rem;
+  flex-shrink: 0;
 }
 
 .manager-error button {
@@ -78,6 +83,7 @@
   border-radius: 3px;
   padding: 20px;
   margin-bottom: 24px;
+  flex-shrink: 0;
 }
 
 .create-wallet-form h3 {
@@ -223,16 +229,24 @@
   border: 1px solid #e0e0e0;
   border-radius: 3px;
   overflow: hidden;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .wallets-table table {
   width: 100%;
   border-collapse: collapse;
+  flex: 1;
 }
 
 .wallets-table thead {
   background: #fafafa;
   border-bottom: 1px solid #e0e0e0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .wallets-table th {
@@ -243,6 +257,7 @@
   color: #666666;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  background: #fafafa;
 }
 
 .wallets-table td {

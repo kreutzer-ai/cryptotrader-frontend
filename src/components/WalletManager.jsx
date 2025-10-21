@@ -20,7 +20,14 @@ const WalletManager = () => {
     setLoading(true)
     try {
       const data = await fetchAllWallets()
-      setWallets(data)
+      // Sort wallets: active ones first, then by creation date (newest first)
+      const sortedData = data.sort((a, b) => {
+        if (a.isActive === b.isActive) {
+          return new Date(b.createdAt) - new Date(a.createdAt)
+        }
+        return a.isActive ? -1 : 1
+      })
+      setWallets(sortedData)
       setError(null)
     } catch (err) {
       setError(err.message)
@@ -143,10 +150,9 @@ const WalletManager = () => {
                   className="btn-generate"
                   onClick={handleGenerateKey}
                 >
-                  Generate Random (Test)
+                  Generate Random Key
                 </button>
               </div>
-              <small className="warning">⚠️ Random keys are for TESTING only. Use real keys for production.</small>
             </div>
 
             <div className="form-actions">
