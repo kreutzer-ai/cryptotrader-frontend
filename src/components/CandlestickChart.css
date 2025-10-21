@@ -10,7 +10,7 @@
 .chart-container-wrapper {
   position: relative;
   width: 100%;
-  height: calc(100vh - 180px);
+  height: calc(100vh - 140px);
   border-radius: 0;
   overflow: hidden;
   background: #ffffff;
@@ -243,7 +243,7 @@
 
 @media (max-width: 768px) {
   .chart-container-wrapper {
-    height: calc(100vh - 220px);
+    height: calc(100vh - 180px);
   }
 
   .chart-wrapper {

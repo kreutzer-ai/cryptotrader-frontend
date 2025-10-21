@@ -612,7 +612,7 @@ const EChartsCandles = ({ selectedMAs, setSelectedMAs, cycles = [], selectedPosi
 
       <ReactECharts
         option={getOption()}
-        style={{ height: '600px', width: '100%' }}
+        style={{ height: 'calc(100vh - 140px)', width: '100%' }}
         notMerge={true}
         lazyUpdate={true}
         onEvents={{

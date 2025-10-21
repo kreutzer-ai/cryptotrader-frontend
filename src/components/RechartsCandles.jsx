@@ -281,11 +281,12 @@ const RechartsCandles = ({ selectedMAs, setSelectedMAs, cycles = [], candleLimit
         </div>
       )}
 
-      <ResponsiveContainer width="100%" height={600}>
-        <ComposedChart
-          data={candleData}
-          margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-        >
+      <div style={{ height: 'calc(100vh - 140px)', width: '100%' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart
+            data={candleData}
+            margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+          >
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           
           <XAxis
@@ -353,6 +354,7 @@ const RechartsCandles = ({ selectedMAs, setSelectedMAs, cycles = [], candleLimit
           })}
         </ComposedChart>
       </ResponsiveContainer>
+      </div>
 
       {lastUpdate && (
         <div className="last-update">

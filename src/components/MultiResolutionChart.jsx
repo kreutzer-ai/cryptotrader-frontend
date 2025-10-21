@@ -768,7 +768,7 @@ const MultiResolutionChart = ({
           <ReactECharts
             ref={chartRef}
             option={chartOption}
-            style={{ height: '600px', width: '100%' }}
+            style={{ height: 'calc(100vh - 140px)', width: '100%' }}
             notMerge={false}
             lazyUpdate={false}
             opts={{ renderer: 'canvas' }}
