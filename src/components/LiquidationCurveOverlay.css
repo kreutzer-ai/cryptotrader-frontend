@@ -1,0 +1,326 @@
+/* Backdrop */
+.liquidation-overlay-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Overlay container */
+.liquidation-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 900px;
+  max-width: 95vw;
+  background: white;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Header */
+.liquidation-overlay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fafafa;
+}
+
+.liquidation-overlay-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.liquidation-close-btn {
+  background: none;
+  border: none;
+  font-size: 32px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.liquidation-close-btn:hover {
+  color: #333;
+}
+
+/* Content */
+.liquidation-overlay-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.liquidation-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  font-size: 16px;
+  color: #666;
+}
+
+/* Chart */
+.liquidation-chart-container {
+  margin-bottom: 24px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 16px;
+}
+
+/* Calculator */
+.liquidation-calculator {
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.liquidation-calculator h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.calculator-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.calculator-row label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  min-width: 80px;
+}
+
+.calculator-row select {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.calculator-row select:hover {
+  border-color: #999;
+}
+
+.calculator-row select:focus {
+  outline: none;
+  border-color: #2196f3;
+}
+
+.leverage-input-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.input-separator {
+  font-size: 12px;
+  color: #999;
+  font-weight: normal;
+}
+
+.leverage-input {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 14px;
+  background: white;
+  width: 150px;
+  transition: border-color 0.2s;
+}
+
+.leverage-input:hover {
+  border-color: #999;
+}
+
+.leverage-input:focus {
+  outline: none;
+  border-color: #2196f3;
+}
+
+.leverage-input::placeholder {
+  color: #999;
+}
+
+/* Calculator Results */
+.calculator-results {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.result-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.result-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  font-family: 'Courier New', monospace;
+}
+
+.result-value.highlight {
+  color: #f44336;
+  font-size: 18px;
+}
+
+.result-info {
+  margin-top: 16px;
+  padding: 12px;
+  background: white;
+  border-left: 3px solid #2196f3;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+}
+
+/* Current Strategy Info */
+.current-strategy-info {
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.current-strategy-info h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1976d2;
+}
+
+.strategy-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.detail-label {
+  font-size: 14px;
+  color: #1565c0;
+  font-weight: 500;
+}
+
+.detail-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0d47a1;
+  font-family: 'Courier New', monospace;
+}
+
+.detail-value.highlight {
+  color: #f44336;
+  font-size: 16px;
+}
+
+/* Info Box */
+.liquidation-info-box {
+  background: #fff3e0;
+  border: 1px solid #ffb74d;
+  border-radius: 4px;
+  padding: 16px;
+}
+
+.liquidation-info-box h4 {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #e65100;
+}
+
+.liquidation-info-box p {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.6;
+}
+
+.liquidation-info-box p:last-child {
+  margin-bottom: 0;
+}
+
+.liquidation-info-box strong {
+  color: #333;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .liquidation-overlay {
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  .liquidation-chart-container {
+    padding: 8px;
+  }
+
+  .calculator-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .calculator-row label {
+    min-width: auto;
+  }
+}
+

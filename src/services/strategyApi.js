@@ -173,3 +173,58 @@ export const fetchAllWallets = async () => {
   }
 }
 
+
+
+
+/**
+ * Calculate liquidation limit for a given leverage
+ * @param {number} leverage - Leverage value (e.g., 5 for 5x)
+ * @param {number} entryPrice - Optional entry price
+ * @param {string} direction - Optional direction (LONG or SHORT)
+ * @returns {Promise<Object>} Liquidation limit data
+ */
+export const calculateLiquidationLimit = async (leverage, entryPrice = null, direction = null) => {
+  try {
+    const requestBody = { leverage }
+    if (entryPrice !== null) {
+      requestBody.entryPrice = entryPrice
+    }
+    if (direction !== null) {
+      requestBody.direction = direction
+    }
+    const response = await axios.post('/api/liquidation/calculate', requestBody)
+    return response.data
+  } catch (error) {
+    console.error('Error calculating liquidation limit:', error)
+    throw new Error('Failed to calculate liquidation limit')
+  }
+}
+
+/**
+ * Fetch liquidation curve data (original data points)
+ * @returns {Promise<Object>} Curve data with original points
+ */
+export const fetchLiquidationCurve = async () => {
+  try {
+    const response = await axios.get('/api/liquidation/curve')
+    return response.data
+  } catch (error) {
+    console.error('Error fetching liquidation curve:', error)
+    throw new Error('Failed to fetch liquidation curve')
+  }
+}
+
+/**
+ * Fetch detailed liquidation curve data (interpolated points)
+ * @param {number} points - Number of points to generate (default: 100)
+ * @returns {Promise<Object>} Curve data with interpolated points
+ */
+export const fetchDetailedLiquidationCurve = async (points = 100) => {
+  try {
+    const response = await axios.get(`/api/liquidation/curve/detailed?points=${points}`)
+    return response.data
+  } catch (error) {
+    console.error('Error fetching detailed liquidation curve:', error)
+    throw new Error('Failed to fetch detailed liquidation curve')
+  }
+}

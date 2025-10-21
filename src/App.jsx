@@ -6,6 +6,7 @@ import MultiResolutionChart from './components/MultiResolutionChart'
 import CyclesPanel from './components/CyclesPanel'
 import StrategyManager from './components/StrategyManager'
 import WalletManager from './components/WalletManager'
+import LiquidationCurveOverlay from './components/LiquidationCurveOverlay'
 import { fetchStrategies } from './services/cryptotraderApi'
 import './App.css'
 
@@ -61,6 +62,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('chart') // 'chart' or 'strategies'
   const [strategies, setStrategies] = useState([])
   const [strategiesLoading, setStrategiesLoading] = useState(false)
+  const [showLiquidationOverlay, setShowLiquidationOverlay] = useState(false)
 
   // Load strategies on mount
   useEffect(() => {
@@ -162,6 +164,12 @@ function App() {
             >
               Wallets
             </button>
+            <button
+              className="tab-btn"
+              onClick={() => setShowLiquidationOverlay(true)}
+            >
+              Liquidation
+            </button>
           </div>
 
           {/* Cycles Toggle - only show on chart tab */}
@@ -242,6 +250,14 @@ function App() {
         />
       ) : (
         <WalletManager />
+      )}
+
+      {/* Liquidation Curve Overlay */}
+      {showLiquidationOverlay && (
+        <LiquidationCurveOverlay
+          onClose={() => setShowLiquidationOverlay(false)}
+          currentLeverage={selectedStrategy?.leverage || null}
+        />
       )}
     </div>
   )
