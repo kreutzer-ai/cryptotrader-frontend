@@ -69,7 +69,7 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
   const loadActiveCycleValue = async (cycleId) => {
     try {
       console.log('Loading active cycle value for cycle:', cycleId)
-      const response = await fetch(`http://localhost:8080/api/cryptotrader/v1/cycles/${cycleId}/current-value`)
+      const response = await fetch(`/api/cryptotrader/v1/cycles/${cycleId}/current-value`)
       if (!response.ok) {
         console.error('Failed to load active cycle current value, status:', response.status)
         return
@@ -135,7 +135,7 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
 
   const loadCyclePositions = async (cycleId) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/cryptotrader/v1/cycles/${cycleId}/positions`)
+      const response = await fetch(`/api/cryptotrader/v1/cycles/${cycleId}/positions`)
       if (!response.ok) {
         console.error('Failed to load positions for cycle', cycleId)
         return
