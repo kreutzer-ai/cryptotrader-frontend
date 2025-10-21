@@ -49,14 +49,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: 12px 16px;
   border-bottom: 1px solid #e0e0e0;
   background: #fafafa;
 }
 
 .liquidation-overlay-header h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #333;
 }
@@ -84,25 +84,25 @@
 .liquidation-overlay-content {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 16px;
 }
 
 .liquidation-loading {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 400px;
-  font-size: 16px;
+  height: 300px;
+  font-size: 14px;
   color: #666;
 }
 
 /* Chart */
 .liquidation-chart-container {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   background: white;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
-  padding: 16px;
+  padding: 12px;
 }
 
 /* Calculator */
@@ -110,13 +110,13 @@
   background: #fafafa;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
-  padding: 16px;
-  margin-bottom: 20px;
+  padding: 12px;
+  margin-bottom: 12px;
 }
 
 .liquidation-calculator h3 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
+  margin: 0 0 12px 0;
+  font-size: 14px;
   font-weight: 600;
   color: #333;
 }
@@ -125,11 +125,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .calculator-row label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: #666;
   min-width: 80px;
@@ -192,8 +192,8 @@
 
 /* Calculator Results */
 .calculator-results {
-  margin-top: 16px;
-  padding-top: 16px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid #e0e0e0;
 }
 
@@ -201,24 +201,24 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .result-label {
-  font-size: 14px;
+  font-size: 13px;
   color: #666;
 }
 
 .result-value {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: #333;
   font-family: 'Courier New', monospace;
 }
 
 .result-value.highlight {
-  color: #f44336;
-  font-size: 18px;
+  color: #555;
+  font-size: 16px;
 }
 
 .result-info {
@@ -233,43 +233,43 @@
 
 /* Current Strategy Info */
 .current-strategy-info {
-  background: #e3f2fd;
-  border: 1px solid #90caf9;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
   border-radius: 4px;
-  padding: 16px;
-  margin-bottom: 20px;
+  padding: 12px;
+  margin-bottom: 12px;
 }
 
 .current-strategy-info h3 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
+  margin: 0 0 10px 0;
+  font-size: 14px;
   font-weight: 600;
-  color: #1976d2;
+  color: #555;
 }
 
 .strategy-detail {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .detail-label {
-  font-size: 14px;
-  color: #1565c0;
+  font-size: 13px;
+  color: #666;
   font-weight: 500;
 }
 
 .detail-value {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  color: #0d47a1;
+  color: #333;
   font-family: 'Courier New', monospace;
 }
 
 .detail-value.highlight {
-  color: #f44336;
-  font-size: 16px;
+  color: #555;
+  font-size: 15px;
 }
 
 /* Info Box */
@@ -303,6 +303,106 @@
   font-weight: 600;
 }
 
+/* Price Input */
+.price-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  transition: border-color 0.2s;
+}
+
+.price-input:focus {
+  outline: none;
+  border-color: #2196f3;
+}
+
+/* Liquidation Prices Grid */
+.liquidation-prices-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.liquidation-price-card {
+  border: 1px solid;
+  border-radius: 4px;
+  overflow: hidden;
+  background: white;
+}
+
+.liquidation-price-card.long {
+  border-color: #4caf50;
+}
+
+.liquidation-price-card.short {
+  border-color: #f44336;
+}
+
+.liquidation-price-card .card-header {
+  padding: 6px 10px;
+  font-weight: 600;
+  font-size: 12px;
+  text-align: center;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.liquidation-price-card.long .card-header {
+  background: #4caf50;
+}
+
+.liquidation-price-card.short .card-header {
+  background: #f44336;
+}
+
+.liquidation-price-card .card-body {
+  padding: 10px;
+}
+
+.price-display {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.price-label {
+  font-size: 11px;
+  color: #666;
+  font-weight: 500;
+}
+
+.price-value {
+  font-size: 16px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  color: #333;
+}
+
+.price-info {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 6px;
+  padding: 6px;
+  background: #f5f5f5;
+  border-radius: 3px;
+  text-align: center;
+}
+
+.price-calculation {
+  font-size: 11px;
+  color: #999;
+  font-family: 'Courier New', monospace;
+  text-align: center;
+  padding-top: 6px;
+  border-top: 1px solid #e0e0e0;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .liquidation-overlay {
@@ -321,6 +421,10 @@
 
   .calculator-row label {
     min-width: auto;
+  }
+
+  .liquidation-prices-grid {
+    grid-template-columns: 1fr;
   }
 }
 

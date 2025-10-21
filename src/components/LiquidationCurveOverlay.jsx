@@ -8,6 +8,8 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
   const [loading, setLoading] = useState(true)
   const [selectedLeverage, setSelectedLeverage] = useState(currentLeverage || 5)
   const [calculatedData, setCalculatedData] = useState(null)
+  const [entryPrice, setEntryPrice] = useState('')
+  const [liquidationPrices, setLiquidationPrices] = useState(null)
 
   // Load curve data on mount
   useEffect(() => {
@@ -20,6 +22,15 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
       calculateLimit()
     }
   }, [selectedLeverage])
+
+  // Calculate liquidation prices when entry price or calculated data changes
+  useEffect(() => {
+    if (entryPrice && calculatedData) {
+      calculateLiquidationPrices()
+    } else {
+      setLiquidationPrices(null)
+    }
+  }, [entryPrice, calculatedData])
 
   const loadCurveData = async () => {
     try {
@@ -42,6 +53,31 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
     }
   }
 
+  const calculateLiquidationPrices = () => {
+    const price = parseFloat(entryPrice)
+    if (isNaN(price) || price <= 0 || !calculatedData) {
+      setLiquidationPrices(null)
+      return
+    }
+
+    const liquidationLimitDecimal = parseFloat(calculatedData.liquidationLimit)
+
+    // For LONG: liquidation happens when price drops by liquidationLimit%
+    // Liquidation price = entry price * (1 - liquidationLimit)
+    const longLiquidationPrice = price * (1 - liquidationLimitDecimal)
+
+    // For SHORT: liquidation happens when price rises by liquidationLimit%
+    // Liquidation price = entry price * (1 + liquidationLimit)
+    const shortLiquidationPrice = price * (1 + liquidationLimitDecimal)
+
+    setLiquidationPrices({
+      long: longLiquidationPrice.toFixed(4),
+      short: shortLiquidationPrice.toFixed(4),
+      longDrop: (liquidationLimitDecimal * 100).toFixed(2),
+      shortRise: (liquidationLimitDecimal * 100).toFixed(2)
+    })
+  }
+
   const getChartOption = () => {
     if (!curveData || !curveData.curvePoints) {
       return {}
@@ -57,15 +93,16 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
         text: 'Liquidation Limit vs Leverage',
         left: 'center',
         textStyle: {
-          fontSize: 16,
-          fontWeight: 'normal'
+          fontSize: 14,
+          fontWeight: 'normal',
+          color: '#555'
         }
       },
       grid: {
         left: '10%',
         right: '10%',
-        top: '15%',
-        bottom: '15%'
+        top: '12%',
+        bottom: '12%'
       },
       xAxis: {
         type: 'value',
@@ -93,11 +130,11 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
           data: chartData,
           smooth: false,
           lineStyle: {
-            color: '#f44336',
+            color: '#2196f3',
             width: 2
           },
           itemStyle: {
-            color: '#f44336'
+            color: '#2196f3'
           },
           areaStyle: {
             color: {
@@ -107,8 +144,8 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
               x2: 0,
               y2: 1,
               colorStops: [
-                { offset: 0, color: 'rgba(244, 67, 54, 0.3)' },
-                { offset: 1, color: 'rgba(244, 67, 54, 0.05)' }
+                { offset: 0, color: 'rgba(33, 150, 243, 0.3)' },
+                { offset: 1, color: 'rgba(33, 150, 243, 0.05)' }
               ]
             }
           },
@@ -117,9 +154,9 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
               {
                 coord: [selectedLeverage, parseFloat(calculatedData.liquidationLimit) * 100],
                 symbol: 'circle',
-                symbolSize: 12,
+                symbolSize: 10,
                 itemStyle: {
-                  color: '#2196f3',
+                  color: '#1976d2',
                   borderColor: '#fff',
                   borderWidth: 2
                 },
@@ -128,7 +165,7 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
                   formatter: `${selectedLeverage}x: ${calculatedData.liquidationLimitPercent}`,
                   position: 'top',
                   color: '#333',
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: 'bold'
                 }
               }
@@ -174,7 +211,7 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
               <div className="liquidation-chart-container">
                 <ReactECharts
                   option={getChartOption()}
-                  style={{ height: '400px', width: '100%' }}
+                  style={{ height: '300px', width: '100%' }}
                   notMerge={true}
                 />
               </div>
@@ -218,12 +255,59 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
                       <span className="result-label">Liquidation Limit:</span>
                       <span className="result-value highlight">{calculatedData.liquidationLimitPercent}</span>
                     </div>
-                    <div className="result-row">
-                      <span className="result-label">Safe Price Drop:</span>
-                      <span className="result-value">{calculatedData.liquidationLimitPercent}</span>
-                    </div>
-                    <div className="result-info">
-                      With {selectedLeverage}x leverage, your position will be liquidated if the price moves against you by more than {calculatedData.liquidationLimitPercent}.
+                  </div>
+                )}
+              </div>
+
+              {/* Price-based Liquidation Calculator */}
+              <div className="liquidation-calculator">
+                <h3>Calculate Liquidation Prices</h3>
+                <div className="calculator-row">
+                  <label>Entry Price:</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={entryPrice}
+                    onChange={(e) => setEntryPrice(e.target.value)}
+                    placeholder="Enter price (e.g., 100.50)"
+                    className="price-input"
+                  />
+                </div>
+
+                {liquidationPrices && (
+                  <div className="calculator-results">
+                    <div className="liquidation-prices-grid">
+                      <div className="liquidation-price-card long">
+                        <div className="card-header">LONG Position</div>
+                        <div className="card-body">
+                          <div className="price-display">
+                            <span className="price-label">Liquidation Price:</span>
+                            <span className="price-value">${liquidationPrices.long}</span>
+                          </div>
+                          <div className="price-info">
+                            Price drops by {liquidationPrices.longDrop}%
+                          </div>
+                          <div className="price-calculation">
+                            ${entryPrice} → ${liquidationPrices.long}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="liquidation-price-card short">
+                        <div className="card-header">SHORT Position</div>
+                        <div className="card-body">
+                          <div className="price-display">
+                            <span className="price-label">Liquidation Price:</span>
+                            <span className="price-value">${liquidationPrices.short}</span>
+                          </div>
+                          <div className="price-info">
+                            Price rises by {liquidationPrices.shortRise}%
+                          </div>
+                          <div className="price-calculation">
+                            ${entryPrice} → ${liquidationPrices.short}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -247,19 +331,6 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
                   </div>
                 </div>
               )}
-
-              {/* Info Box */}
-              <div className="liquidation-info-box">
-                <h4>ℹ️ About Liquidation</h4>
-                <p>
-                  <strong>Liquidation</strong> occurs when your position's losses approach your collateral amount.
-                  Higher leverage means lower liquidation limits (less room for price movement).
-                </p>
-                <p>
-                  <strong>Example:</strong> With 5x leverage and a liquidation limit of 19.34%, if you enter a LONG position at $100,
-                  your position will be liquidated if the price drops below $80.66 (a 19.34% drop).
-                </p>
-              </div>
             </>
           )}
         </div>
