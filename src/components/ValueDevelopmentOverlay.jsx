@@ -33,32 +33,34 @@ const ValueDevelopmentOverlay = ({ onClose, selectedStrategy }) => {
       return { timestamps: [], values: [], pnls: [] }
     }
 
-    // Sort cycles by start time
-    const sortedCycles = [...cycles].sort((a, b) => 
-      new Date(a.startTime) - new Date(b.startTime)
-    )
+    // Filter only closed cycles and sort by end time
+    const closedCycles = cycles
+      .filter(c => c.endTime && c.status !== 'ACTIVE' && c.status !== 'WAITING')
+      .sort((a, b) => new Date(a.endTime) - new Date(b.endTime))
 
     const timestamps = []
     const values = []
     const pnls = []
-    
-    let cumulativeValue = selectedStrategy.simulatedBalance || 0
 
-    // Add starting point
-    if (sortedCycles.length > 0) {
-      timestamps.push(new Date(sortedCycles[0].startTime).getTime())
-      values.push(cumulativeValue)
-      pnls.push(0)
+    if (closedCycles.length === 0) {
+      return { timestamps: [], values: [], pnls: [] }
     }
 
+    // Calculate starting value (current balance minus all closed cycle PnLs)
+    const totalPnl = closedCycles.reduce((sum, c) => sum + (c.netPnl || 0), 0)
+    let cumulativeValue = (selectedStrategy.simulatedBalance || 0) - totalPnl
+
+    // Add starting point at first cycle's start time
+    timestamps.push(new Date(closedCycles[0].startTime).getTime())
+    values.push(cumulativeValue)
+    pnls.push(0)
+
     // Add each cycle's end point
-    sortedCycles.forEach(cycle => {
-      if (cycle.endTime) {
-        cumulativeValue += (cycle.netPnl || 0)
-        timestamps.push(new Date(cycle.endTime).getTime())
-        values.push(cumulativeValue)
-        pnls.push(cycle.netPnl || 0)
-      }
+    closedCycles.forEach(cycle => {
+      cumulativeValue += (cycle.netPnl || 0)
+      timestamps.push(new Date(cycle.endTime).getTime())
+      values.push(cumulativeValue)
+      pnls.push(cycle.netPnl || 0)
     })
 
     return { timestamps, values, pnls }
@@ -186,7 +188,7 @@ const ValueDevelopmentOverlay = ({ onClose, selectedStrategy }) => {
 
   const calculateStats = () => {
     const { values } = buildChartData()
-    
+
     if (values.length === 0) {
       return {
         startValue: 0,
@@ -204,7 +206,7 @@ const ValueDevelopmentOverlay = ({ onClose, selectedStrategy }) => {
     const totalPnlPercent = startValue > 0 ? (totalPnl / startValue) * 100 : 0
 
     const closedCycles = cycles.filter(c => c.status !== 'ACTIVE' && c.status !== 'WAITING').length
-    const profitableCycles = cycles.filter(c => (c.netPnl || 0) > 0).length
+    const profitableCycles = cycles.filter(c => (c.netPnl || 0) > 0 && c.status !== 'ACTIVE' && c.status !== 'WAITING').length
 
     return {
       startValue,

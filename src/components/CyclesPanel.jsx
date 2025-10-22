@@ -214,7 +214,10 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
   }
 
   const calculateTotalPnL = () => {
-    return cycles.reduce((sum, cycle) => sum + (cycle.netPnl || 0), 0)
+    // Exclude open cycles (ACTIVE or WAITING) from calculation
+    return cycles
+      .filter(c => c.status !== 'ACTIVE' && c.status !== 'WAITING')
+      .reduce((sum, cycle) => sum + (cycle.netPnl || 0), 0)
   }
 
   const calculateActiveCycles = () => {
@@ -226,7 +229,8 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
   }
 
   const calculateProfitableCycles = () => {
-    return cycles.filter(c => c.netPnl > 0).length
+    // Exclude open cycles (ACTIVE or WAITING) from calculation
+    return cycles.filter(c => c.netPnl > 0 && c.status !== 'ACTIVE' && c.status !== 'WAITING').length
   }
 
   const calculateProfitPerMinute = (cycle) => {
@@ -237,13 +241,16 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
 
   // Calculate profit rate per hour in percent
   const calculateProfitRatePerHour = () => {
-    if (cycles.length === 0) return 0
+    // Exclude open cycles (ACTIVE or WAITING) from calculation
+    const closedCycles = cycles.filter(c => c.status !== 'ACTIVE' && c.status !== 'WAITING')
 
-    // Calculate total duration in hours across all cycles
+    if (closedCycles.length === 0) return 0
+
+    // Calculate total duration in hours across all closed cycles
     let totalDurationHours = 0
     let totalPnl = 0
 
-    cycles.forEach(cycle => {
+    closedCycles.forEach(cycle => {
       const durationMinutes = calculateDuration(cycle.startTime, cycle.endTime)
       if (durationMinutes && durationMinutes > 0) {
         totalDurationHours += durationMinutes / 60
@@ -253,8 +260,8 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
 
     if (totalDurationHours === 0) return 0
 
-    // Calculate average starting balance
-    const avgStartingBalance = cycles.reduce((sum, c) => sum + (c.startingBalance || 0), 0) / cycles.length
+    // Calculate average starting balance from closed cycles
+    const avgStartingBalance = closedCycles.reduce((sum, c) => sum + (c.startingBalance || 0), 0) / closedCycles.length
     if (avgStartingBalance === 0) return 0
 
     // Profit per hour as percentage of average starting balance
