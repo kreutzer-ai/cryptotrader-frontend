@@ -33,34 +33,20 @@ const ValueDevelopmentOverlay = ({ onClose, selectedStrategy }) => {
       return { timestamps: [], values: [], pnls: [] }
     }
 
-    // Filter only closed cycles and sort by end time
-    const closedCycles = cycles
-      .filter(c => c.endTime && c.status !== 'ACTIVE' && c.status !== 'WAITING')
-      .sort((a, b) => new Date(a.endTime) - new Date(b.endTime))
+    // Sort all cycles by start time
+    const sortedCycles = [...cycles].sort((a, b) =>
+      new Date(a.startTime) - new Date(b.startTime)
+    )
 
     const timestamps = []
     const values = []
     const pnls = []
 
-    if (closedCycles.length === 0) {
-      return { timestamps: [], values: [], pnls: [] }
-    }
-
-    // Calculate starting value (current balance minus all closed cycle PnLs)
-    const totalPnl = closedCycles.reduce((sum, c) => sum + (c.netPnl || 0), 0)
-    let cumulativeValue = (selectedStrategy.simulatedBalance || 0) - totalPnl
-
-    // Add starting point at first cycle's start time
-    timestamps.push(new Date(closedCycles[0].startTime).getTime())
-    values.push(cumulativeValue)
-    pnls.push(0)
-
-    // Add each cycle's end point
-    closedCycles.forEach(cycle => {
-      cumulativeValue += (cycle.netPnl || 0)
-      timestamps.push(new Date(cycle.endTime).getTime())
-      values.push(cumulativeValue)
-      pnls.push(cycle.netPnl || 0)
+    // Add each cycle's starting balance at its start time
+    sortedCycles.forEach(cycle => {
+      timestamps.push(new Date(cycle.startTime).getTime())
+      values.push(cycle.startingBalance || 0)
+      pnls.push(0) // No PnL at start
     })
 
     return { timestamps, values, pnls }
@@ -187,9 +173,7 @@ const ValueDevelopmentOverlay = ({ onClose, selectedStrategy }) => {
   }
 
   const calculateStats = () => {
-    const { values } = buildChartData()
-
-    if (values.length === 0) {
+    if (cycles.length === 0) {
       return {
         startValue: 0,
         currentValue: 0,
@@ -200,8 +184,13 @@ const ValueDevelopmentOverlay = ({ onClose, selectedStrategy }) => {
       }
     }
 
-    const startValue = values[0]
-    const currentValue = values[values.length - 1]
+    // Sort cycles by start time
+    const sortedCycles = [...cycles].sort((a, b) =>
+      new Date(a.startTime) - new Date(b.startTime)
+    )
+
+    const startValue = sortedCycles[0].startingBalance || 0
+    const currentValue = selectedStrategy.simulatedBalance || 0
     const totalPnl = currentValue - startValue
     const totalPnlPercent = startValue > 0 ? (totalPnl / startValue) * 100 : 0
 
