@@ -18,7 +18,7 @@ const ValueDevelopmentOverlay = ({ onClose, selectedStrategy }) => {
     try {
       setLoading(true)
       setError(null)
-      const data = await fetchCycles(selectedStrategy.id)
+      const data = await fetchCycles({ strategyConfigId: selectedStrategy.id })
       setCycles(data)
     } catch (err) {
       console.error('Failed to load cycles:', err)
