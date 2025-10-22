@@ -12,6 +12,7 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
   const [showOverlay, setShowOverlay] = useState(false)
   const [cyclePositions, setCyclePositions] = useState({})
   const [activeCycleValue, setActiveCycleValue] = useState(null)
+  const [selectedRateTimeframe, setSelectedRateTimeframe] = useState('hour') // 'hour', 'day', 'month', 'year'
 
   console.log('CyclesPanel rendering - strategies:', strategies.length, 'cycles:', cycles.length, 'loading:', loading, 'error:', error, 'initialStrategy:', initialStrategy)
 
@@ -259,9 +260,28 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
     return (profitPerHour / avgStartingBalance) * 100
   }
 
-  // Calculate profit rate per day in percent
+  // Calculate profit rate per day in percent (compound interest)
   const calculateProfitRatePerDay = () => {
-    return calculateProfitRatePerHour() * 24
+    const hourlyRate = calculateProfitRatePerHour() / 100 // Convert to decimal
+    // Compound 24 times (once per hour)
+    const dailyMultiplier = Math.pow(1 + hourlyRate, 24)
+    return (dailyMultiplier - 1) * 100 // Convert back to percent
+  }
+
+  // Calculate profit rate per month in percent (30 days, compound interest)
+  const calculateProfitRatePerMonth = () => {
+    const hourlyRate = calculateProfitRatePerHour() / 100 // Convert to decimal
+    // Compound 24 * 30 = 720 times (once per hour for 30 days)
+    const monthlyMultiplier = Math.pow(1 + hourlyRate, 24 * 30)
+    return (monthlyMultiplier - 1) * 100 // Convert back to percent
+  }
+
+  // Calculate profit rate per year in percent (365 days, compound interest)
+  const calculateProfitRatePerYear = () => {
+    const hourlyRate = calculateProfitRatePerHour() / 100 // Convert to decimal
+    // Compound 24 * 365 = 8760 times (once per hour for 365 days)
+    const yearlyMultiplier = Math.pow(1 + hourlyRate, 24 * 365)
+    return (yearlyMultiplier - 1) * 100 // Convert back to percent
   }
 
   // Get current cycle PnL (in dollars)
@@ -274,6 +294,38 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
   const getCurrentCyclePnlPercent = () => {
     if (!activeCycleValue) return 0
     return (activeCycleValue.totalPnlPercent || 0) * 100
+  }
+
+  // Get selected profit rate based on timeframe
+  const getSelectedProfitRate = () => {
+    switch (selectedRateTimeframe) {
+      case 'hour':
+        return calculateProfitRatePerHour()
+      case 'day':
+        return calculateProfitRatePerDay()
+      case 'month':
+        return calculateProfitRatePerMonth()
+      case 'year':
+        return calculateProfitRatePerYear()
+      default:
+        return calculateProfitRatePerHour()
+    }
+  }
+
+  // Get decimal places for selected rate
+  const getRateDecimalPlaces = () => {
+    switch (selectedRateTimeframe) {
+      case 'hour':
+        return 4
+      case 'day':
+        return 2
+      case 'month':
+        return 1
+      case 'year':
+        return 0
+      default:
+        return 4
+    }
   }
 
   const getStatusColor = (status) => {
@@ -364,16 +416,19 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
                 <span className="stat-label">Target:</span>
                 <span className="stat-value">{(selectedStrategy.profitThreshold * 100).toFixed(3)}%</span>
               </div>
-              <div className="summary-stat">
-                <span className="stat-label">Rate/h:</span>
-                <span className={`stat-value ${calculateProfitRatePerHour() >= 0 ? 'positive' : 'negative'}`}>
-                  {calculateProfitRatePerHour() >= 0 ? '+' : ''}{calculateProfitRatePerHour().toFixed(4)}%
-                </span>
-              </div>
-              <div className="summary-stat">
-                <span className="stat-label">Rate/d:</span>
-                <span className={`stat-value ${calculateProfitRatePerDay() >= 0 ? 'positive' : 'negative'}`}>
-                  {calculateProfitRatePerDay() >= 0 ? '+' : ''}{calculateProfitRatePerDay().toFixed(2)}%
+              <div className="summary-stat-group">
+                <select
+                  className="rate-timeframe-selector"
+                  value={selectedRateTimeframe}
+                  onChange={(e) => setSelectedRateTimeframe(e.target.value)}
+                >
+                  <option value="hour">Rate/h</option>
+                  <option value="day">Rate/d</option>
+                  <option value="month">Rate/m</option>
+                  <option value="year">Rate/y</option>
+                </select>
+                <span className={`stat-value ${getSelectedProfitRate() >= 0 ? 'positive' : 'negative'}`}>
+                  {getSelectedProfitRate() >= 0 ? '+' : ''}{getSelectedProfitRate().toFixed(getRateDecimalPlaces())}%
                 </span>
               </div>
               <div className="summary-stat">
