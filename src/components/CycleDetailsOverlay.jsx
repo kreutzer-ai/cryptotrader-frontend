@@ -204,6 +204,12 @@ const CycleDetailsOverlay = ({ cycles, cyclePositions, onClose, selectedStrategy
                 <span className="detail-label">Short Invested:</span>
                 <span className="detail-value negative">${cycle.totalInvestedShort?.toFixed(2) || '0.00'}</span>
               </div>
+              <div className="detail-item">
+                <span className="detail-label">Total Borrow Fees:</span>
+                <span className="detail-value negative">
+                  ${positionsToShow.reduce((sum, pos) => sum + (pos.accumulatedBorrowFees || 0), 0).toFixed(2)}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -231,6 +237,8 @@ const CycleDetailsOverlay = ({ cycles, cyclePositions, onClose, selectedStrategy
                       <th>Size</th>
                       <th>P&L</th>
                       <th>P&L %</th>
+                      <th>Borrow Fee</th>
+                      <th>Fee Rate</th>
                       <th>Status</th>
                     </tr>
                   </thead>
@@ -269,6 +277,16 @@ const CycleDetailsOverlay = ({ cycles, cyclePositions, onClose, selectedStrategy
                             ? `${pos.unrealizedPnlPercent >= 0 ? '+' : ''}${(pos.unrealizedPnlPercent * 100).toFixed(2)}%`
                             : pos.realizedPnlPercent != null
                             ? `${pos.realizedPnlPercent >= 0 ? '+' : ''}${pos.realizedPnlPercent.toFixed(2)}%`
+                            : '-'}
+                        </td>
+                        <td className="position-borrow-fee negative">
+                          {pos.accumulatedBorrowFees != null
+                            ? `$${pos.accumulatedBorrowFees.toFixed(2)}`
+                            : '$0.00'}
+                        </td>
+                        <td className="position-fee-rate">
+                          {pos.borrowFeeRate != null
+                            ? `${(pos.borrowFeeRate * 100).toFixed(5)}%/hr`
                             : '-'}
                         </td>
                         <td>
