@@ -85,6 +85,7 @@ const CycleDetailsOverlay = ({ cycles, cyclePositions, onClose, selectedStrategy
       case 'CLOSED_PROFIT': return 'profit'
       case 'CLOSED_DURATION': return 'duration'
       case 'CLOSED_MANUAL': return 'manual'
+      case 'CLOSED_LIQUIDATION': return 'liquidation'
       default: return 'failed'
     }
   }

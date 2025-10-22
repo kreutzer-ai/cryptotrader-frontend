@@ -53,6 +53,8 @@ const CycleTimeline = ({ cycles, chartTimeRange }) => {
         return '#1976d2' // Blue
       case 'CLOSED_DURATION':
         return '#f57c00' // Orange
+      case 'CLOSED_LIQUIDATION':
+        return '#d32f2f' // Dark Red
       case 'FAILED':
         return '#c62828' // Red
       default:
@@ -68,6 +70,8 @@ const CycleTimeline = ({ cycles, chartTimeRange }) => {
         return 'Profit'
       case 'CLOSED_DURATION':
         return 'Duration'
+      case 'CLOSED_LIQUIDATION':
+        return 'Liquidated'
       case 'FAILED':
         return 'Failed'
       default:

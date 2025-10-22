@@ -203,6 +203,8 @@ const RechartsCandles = ({ selectedMAs, setSelectedMAs, cycles = [], candleLimit
         return 'rgba(25, 118, 210, 0.12)'
       case 'CLOSED_DURATION':
         return 'rgba(245, 124, 0, 0.12)'
+      case 'CLOSED_LIQUIDATION':
+        return 'rgba(211, 47, 47, 0.15)'
       case 'FAILED':
         return 'rgba(198, 40, 40, 0.12)'
       default:

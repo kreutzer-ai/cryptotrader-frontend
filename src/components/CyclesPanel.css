@@ -447,6 +447,12 @@
   color: #7b1fa2;
 }
 
+.status-liquidation {
+  background: #fce4ec;
+  color: #d32f2f;
+  font-weight: 600;
+}
+
 .status-failed {
   background: #ffebee;
   color: #c62828;

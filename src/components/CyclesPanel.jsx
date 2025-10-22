@@ -348,6 +348,8 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
         return 'status-duration'
       case 'CLOSED_MANUAL':
         return 'status-manual'
+      case 'CLOSED_LIQUIDATION':
+        return 'status-liquidation'
       case 'FAILED':
         return 'status-failed'
       default:
@@ -367,6 +369,8 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
         return '⏱️ Duration'
       case 'CLOSED_MANUAL':
         return '✋ Manual'
+      case 'CLOSED_LIQUIDATION':
+        return '🔴 Liquidated'
       case 'FAILED':
         return '❌ Failed'
       default:
