@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import './CycleDetailsOverlay.css'
+import { fetchCycleCurrentValue } from '../services/cryptotraderApi'
 
 const CycleDetailsOverlay = ({ cycles, cyclePositions, onClose, selectedStrategy, onVisualizePositions, onLoadPositions }) => {
   const [expandedCycle, setExpandedCycle] = useState(null)
+  const [cycleCurrentValues, setCycleCurrentValues] = useState({})
 
   if (!cycles || cycles.length === 0) return null
 
@@ -51,13 +53,28 @@ const CycleDetailsOverlay = ({ cycles, cyclePositions, onClose, selectedStrategy
     }
   }
 
-  const toggleCycleExpand = async (cycleId) => {
+  const toggleCycleExpand = async (cycleId, cycleStatus) => {
     const newExpandedCycle = expandedCycle === cycleId ? null : cycleId
     setExpandedCycle(newExpandedCycle)
 
-    // Load positions for this cycle if expanding and not already loaded
-    if (newExpandedCycle && !cyclePositions[cycleId] && onLoadPositions) {
-      await onLoadPositions(cycleId)
+    if (newExpandedCycle) {
+      // Load positions for this cycle if not already loaded
+      if (!cyclePositions[cycleId] && onLoadPositions) {
+        await onLoadPositions(cycleId)
+      }
+      
+      // For ACTIVE cycles, also fetch current value with unrealized PnL
+      if (cycleStatus === 'ACTIVE') {
+        try {
+          const currentValue = await fetchCycleCurrentValue(cycleId)
+          setCycleCurrentValues(prev => ({
+            ...prev,
+            [cycleId]: currentValue
+          }))
+        } catch (error) {
+          console.error(`Failed to fetch current value for cycle ${cycleId}:`, error)
+        }
+      }
     }
   }
 
@@ -83,9 +100,13 @@ const CycleDetailsOverlay = ({ cycles, cyclePositions, onClose, selectedStrategy
 
         <div className="overlay-content">
           <div className="cycles-list">
-            {cycles.map(cycle => (
+            {cycles.map(cycle => {
+              const currentValue = cycleCurrentValues[cycle.id]
+              const positionsToShow = currentValue?.positions || cyclePositions[cycle.id] || []
+              
+              return (
               <div key={cycle.id} className="cycle-card">
-                <div className="cycle-header" onClick={() => toggleCycleExpand(cycle.id)}>
+                <div className="cycle-header" onClick={() => toggleCycleExpand(cycle.id, cycle.status)}>
                   <div className="cycle-title">
                     <span className="cycle-number">#{cycle.cycleNumber}</span>
                     <span className="cycle-id">(ID: {cycle.id})</span>
@@ -186,10 +207,10 @@ const CycleDetailsOverlay = ({ cycles, cyclePositions, onClose, selectedStrategy
             </div>
           </div>
 
-          {cyclePositions[cycle.id] && cyclePositions[cycle.id].length > 0 && (
+          {positionsToShow.length > 0 && (
             <div className="detail-section positions-list">
               <div className="positions-header">
-                <h4>Position Details ({cyclePositions[cycle.id].length})</h4>
+                <h4>Position Details ({positionsToShow.length})</h4>
                 <button
                   className="visualize-btn"
                   onClick={() => handleVisualizePositions(cycle.id)}
@@ -214,8 +235,8 @@ const CycleDetailsOverlay = ({ cycles, cyclePositions, onClose, selectedStrategy
                     </tr>
                   </thead>
                   <tbody>
-                    {cyclePositions[cycle.id].map((pos, idx) => (
-                      <tr key={pos.id || idx}>
+                    {positionsToShow.map((pos, idx) => (
+                      <tr key={pos.positionId || pos.id || idx}>
                         <td>
                           <span className={`position-direction ${pos.direction?.toLowerCase()}`}>
                             {pos.direction || 'N/A'}
@@ -231,16 +252,24 @@ const CycleDetailsOverlay = ({ cycles, cyclePositions, onClose, selectedStrategy
                           ${pos.entryPrice?.toFixed(4) || 'N/A'}
                         </td>
                         <td className="position-price">
-                          {pos.exitPrice ? `$${pos.exitPrice.toFixed(4)}` : '-'}
+                          {pos.exitPrice ? `$${pos.exitPrice.toFixed(4)}` : pos.currentPrice ? `$${pos.currentPrice.toFixed(4)}` : '-'}
                         </td>
                         <td className="position-size">
                           ${pos.positionSize?.toFixed(2) || 'N/A'}
                         </td>
-                        <td className={`position-pnl ${(pos.realizedPnl || 0) >= 0 ? 'positive' : 'negative'}`}>
-                          {pos.realizedPnl != null ? `${pos.realizedPnl >= 0 ? '+' : ''}$${pos.realizedPnl.toFixed(2)}` : '-'}
+                        <td className={`position-pnl ${(pos.unrealizedPnl || pos.realizedPnl || 0) >= 0 ? 'positive' : 'negative'}`}>
+                          {pos.status === 'OPEN' && pos.unrealizedPnl != null 
+                            ? `${pos.unrealizedPnl >= 0 ? '+' : ''}$${pos.unrealizedPnl.toFixed(2)}`
+                            : pos.realizedPnl != null 
+                            ? `${pos.realizedPnl >= 0 ? '+' : ''}$${pos.realizedPnl.toFixed(2)}`
+                            : '-'}
                         </td>
-                        <td className={`position-pnl-percent ${(pos.realizedPnlPercent || 0) >= 0 ? 'positive' : 'negative'}`}>
-                          {pos.realizedPnlPercent != null ? `${pos.realizedPnlPercent >= 0 ? '+' : ''}${pos.realizedPnlPercent.toFixed(2)}%` : '-'}
+                        <td className={`position-pnl-percent ${(pos.unrealizedPnlPercent || pos.realizedPnlPercent || 0) >= 0 ? 'positive' : 'negative'}`}>
+                          {pos.status === 'OPEN' && pos.unrealizedPnlPercent != null
+                            ? `${pos.unrealizedPnlPercent >= 0 ? '+' : ''}${(pos.unrealizedPnlPercent * 100).toFixed(2)}%`
+                            : pos.realizedPnlPercent != null
+                            ? `${pos.realizedPnlPercent >= 0 ? '+' : ''}${pos.realizedPnlPercent.toFixed(2)}%`
+                            : '-'}
                         </td>
                         <td>
                           <span className={`position-status ${pos.status?.toLowerCase()}`}>
@@ -257,7 +286,7 @@ const CycleDetailsOverlay = ({ cycles, cyclePositions, onClose, selectedStrategy
                   </div>
                 )}
               </div>
-            ))}
+            )})}
           </div>
         </div>
       </div>
@@ -266,4 +295,3 @@ const CycleDetailsOverlay = ({ cycles, cyclePositions, onClose, selectedStrategy
 }
 
 export default CycleDetailsOverlay
-

@@ -269,3 +269,18 @@ export const fetch15SecCandlesRange = async (mint = SOL_MINT, startTime, endTime
     throw new Error('Failed to fetch 15-second candles range')
   }
 }
+
+/**
+ * Fetch cycle current value with latest price and position details
+ * @param {number} cycleId - Cycle ID
+ * @returns {Promise<Object>} Cycle current value with unrealized PnL for open positions
+ */
+export const fetchCycleCurrentValue = async (cycleId) => {
+  try {
+    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/cycles/${cycleId}/current-value`)
+    return response.data
+  } catch (error) {
+    console.error(`Error fetching current value for cycle ${cycleId}:`, error)
+    throw new Error('Failed to fetch cycle current value')
+  }
+}
