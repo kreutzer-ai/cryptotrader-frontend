@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { fetchCycles } from '../services/cryptotraderApi'
 import { getAuthHeader } from '../services/authService'
 import CycleDetailsOverlay from './CycleDetailsOverlay'
+import ValueDevelopmentOverlay from './ValueDevelopmentOverlay'
 import './CyclesPanel.css'
 
 const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, initialStrategy, strategies = [], strategiesLoading = false }) => {
@@ -10,6 +11,7 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showOverlay, setShowOverlay] = useState(false)
+  const [showValueDevOverlay, setShowValueDevOverlay] = useState(false)
   const [cyclePositions, setCyclePositions] = useState({})
   const [activeCycleValue, setActiveCycleValue] = useState(null)
   const [selectedRateTimeframe, setSelectedRateTimeframe] = useState('hour') // 'hour', 'day', 'month', 'year'
@@ -389,6 +391,10 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
 
         {!loading && !error && selectedStrategy && cycles.length > 0 && (
           <>
+            <button className="view-value-dev-btn" onClick={() => setShowValueDevOverlay(true)} title="Value Development Chart">
+              $
+            </button>
+
             <div className="strategy-summary-compact">
               <div className="summary-stat">
                 <span className="stat-label">P&L:</span>
@@ -461,6 +467,13 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
           selectedStrategy={selectedStrategy}
           onVisualizePositions={handleVisualizePositions}
           onLoadPositions={loadCyclePositions}
+        />
+      )}
+
+      {showValueDevOverlay && selectedStrategy && (
+        <ValueDevelopmentOverlay
+          onClose={() => setShowValueDevOverlay(false)}
+          selectedStrategy={selectedStrategy}
         />
       )}
     </>

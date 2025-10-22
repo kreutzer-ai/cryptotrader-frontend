@@ -119,6 +119,13 @@ const CycleDetailsOverlay = ({ cycles, cyclePositions, onClose, selectedStrategy
                     </span>
                   </div>
                   <div className="cycle-summary-stats">
+                    <span className="cycle-time">
+                      {formatTimestamp(cycle.startTime)}
+                    </span>
+                    <span className="cycle-time-separator">→</span>
+                    <span className="cycle-time">
+                      {cycle.endTime ? formatTimestamp(cycle.endTime) : 'Active'}
+                    </span>
                     <span className={`cycle-pnl ${cycle.netPnl >= 0 ? 'positive' : 'negative'}`}>
                       {cycle.netPnl >= 0 ? '+' : ''}${cycle.netPnl?.toFixed(2) || '0.00'}
                     </span>

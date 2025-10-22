@@ -104,7 +104,8 @@
   color: #c62828;
 }
 
-.view-cycles-btn {
+.view-cycles-btn,
+.view-value-dev-btn {
   padding: 4px 10px;
   background: white;
   color: #333;
@@ -113,15 +114,28 @@
   font-size: 12px;
   font-weight: normal;
   transition: all 0.2s;
+}
+
+.view-cycles-btn {
   margin-left: auto;
 }
 
-.view-cycles-btn:hover {
+.view-value-dev-btn {
+  margin-left: 8px;
+  padding: 4px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.view-cycles-btn:hover,
+.view-value-dev-btn:hover {
   background: #f5f5f5;
   border-color: #999;
 }
 
-.view-cycles-btn:active {
+.view-cycles-btn:active,
+.view-value-dev-btn:active {
   background: #e0e0e0;
 }
 
