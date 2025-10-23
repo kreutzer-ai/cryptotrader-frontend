@@ -284,3 +284,20 @@ export const fetchCycleCurrentValue = async (cycleId) => {
     throw new Error('Failed to fetch cycle current value')
   }
 }
+
+/**
+ * Fetch active cycle for a specific strategy
+ * @param {number} strategyId - Strategy ID
+ * @returns {Promise<Object>} Active cycle data
+ */
+export const fetchActiveCycleForStrategy = async (strategyId) => {
+  try {
+    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/cycles`, {
+      params: { strategyConfigId: strategyId, status: 'ACTIVE' }
+    })
+    return response.data && response.data.length > 0 ? response.data[0] : null
+  } catch (error) {
+    console.error(`Error fetching active cycle for strategy ${strategyId}:`, error)
+    throw new Error('Failed to fetch active cycle')
+  }
+}

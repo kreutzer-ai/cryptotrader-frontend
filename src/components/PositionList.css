@@ -1,0 +1,161 @@
+.position-list {
+  padding: 12px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: #1a1a1a;
+}
+
+.position-list h3 {
+  margin: 0 0 6px 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  padding: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+.positions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid #e0e0e0;
+  background: white;
+}
+
+.position-card {
+  background: white;
+  border: none;
+  border-bottom: 1px solid #e0e0e0;
+  border-radius: 0;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+}
+
+.position-card:last-child {
+  border-bottom: none;
+}
+
+.position-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 6px 8px;
+  background: white;
+  cursor: default;
+  font-size: 0.7rem;
+  justify-content: space-between;
+}
+
+.position-header:hover {
+  background: #fafafa;
+}
+
+.position-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.position-number {
+  font-weight: 600;
+  color: #1a1a1a;
+  flex-shrink: 0;
+}
+
+.entry-price {
+  color: #666;
+  flex-shrink: 0;
+}
+
+.position-meta {
+  font-size: 0.65rem;
+  color: #999;
+  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.position-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.direction-badge {
+  padding: 2px 5px;
+  border-radius: 0;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.direction-badge.long {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.direction-badge.short {
+  background: #fce4ec;
+  color: #c2185b;
+}
+
+.position-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.7rem;
+}
+
+.position-summary .entry-price {
+  min-width: 60px;
+  color: #666;
+}
+
+.position-summary .pnl {
+  font-size: 0.7rem;
+  min-width: 70px;
+  font-weight: 600;
+}
+
+.position-summary .pnl.positive {
+  color: #2e7d32;
+}
+
+.position-summary .pnl.negative {
+  color: #c62828;
+}
+
+.expand-icon {
+  display: none;
+}
+
+.position-details {
+  display: none;
+}
+
+.details-grid {
+  display: none;
+}
+
+.fees-section {
+  display: none;
+}
+
+.no-positions {
+  padding: 12px 8px;
+  text-align: center;
+  color: #999;
+  font-size: 0.7rem;
+}

@@ -6,11 +6,14 @@ import MultiResolutionChart from './components/MultiResolutionChart'
 import CyclesPanel from './components/CyclesPanel'
 import StrategyManager from './components/StrategyManager'
 import WalletManager from './components/WalletManager'
+import CycleMonitor from './components/CycleMonitor'
 import LiquidationCurveOverlay from './components/LiquidationCurveOverlay'
 import { fetchStrategies } from './services/cryptotraderApi'
 import './App.css'
 
 function App() {
+  console.log('App component rendering')
+
   // Initialize from URL params or use defaults
   const getInitialMAs = () => {
     const params = new URLSearchParams(window.location.search)
@@ -165,6 +168,12 @@ function App() {
               Wallets
             </button>
             <button
+              className={`tab-btn ${activeTab === 'monitor' ? 'active' : ''}`}
+              onClick={() => setActiveTab('monitor')}
+            >
+              Cycle Monitor
+            </button>
+            <button
               className="tab-btn"
               onClick={() => setShowLiquidationOverlay(true)}
             >
@@ -187,70 +196,74 @@ function App() {
         </div>
       </header>
 
-      {activeTab === 'chart' ? (
-        <>
-          {chartType === 'multiresolution' ? (
-            <MultiResolutionChart
-              selectedMAs={selectedMAs}
-              setSelectedMAs={setSelectedMAs}
-              cycles={cycles}
-              selectedPositions={selectedPositions}
-              selectedStrategy={selectedStrategy}
-              candleLimit={candleLimit}
-              setCandleLimit={setCandleLimit}
-            />
-          ) : chartType === 'echarts' ? (
-            <EChartsCandles
-              selectedMAs={selectedMAs}
-              setSelectedMAs={setSelectedMAs}
-              cycles={cycles}
-              selectedPositions={selectedPositions}
-              selectedStrategy={selectedStrategy}
-              candleLimit={candleLimit}
-              setCandleLimit={setCandleLimit}
-            />
-          ) : chartType === 'recharts' ? (
-            <RechartsCandles
-              selectedMAs={selectedMAs}
-              setSelectedMAs={setSelectedMAs}
-              cycles={cycles}
-              selectedPositions={selectedPositions}
-              selectedStrategy={selectedStrategy}
-              candleLimit={candleLimit}
-              setCandleLimit={setCandleLimit}
-            />
-          ) : (
-            <CandlestickChart
-              selectedMAs={selectedMAs}
-              setSelectedMAs={setSelectedMAs}
-              cycles={cycles}
-              selectedPositions={selectedPositions}
-              selectedStrategy={selectedStrategy}
-              candleLimit={candleLimit}
-              setCandleLimit={setCandleLimit}
-            />
-          )}
+      <div className="app-content">
+        {activeTab === 'chart' ? (
+          <>
+            {chartType === 'multiresolution' ? (
+              <MultiResolutionChart
+                selectedMAs={selectedMAs}
+                setSelectedMAs={setSelectedMAs}
+                cycles={cycles}
+                selectedPositions={selectedPositions}
+                selectedStrategy={selectedStrategy}
+                candleLimit={candleLimit}
+                setCandleLimit={setCandleLimit}
+              />
+            ) : chartType === 'echarts' ? (
+              <EChartsCandles
+                selectedMAs={selectedMAs}
+                setSelectedMAs={setSelectedMAs}
+                cycles={cycles}
+                selectedPositions={selectedPositions}
+                selectedStrategy={selectedStrategy}
+                candleLimit={candleLimit}
+                setCandleLimit={setCandleLimit}
+              />
+            ) : chartType === 'recharts' ? (
+              <RechartsCandles
+                selectedMAs={selectedMAs}
+                setSelectedMAs={setSelectedMAs}
+                cycles={cycles}
+                selectedPositions={selectedPositions}
+                selectedStrategy={selectedStrategy}
+                candleLimit={candleLimit}
+                setCandleLimit={setCandleLimit}
+              />
+            ) : (
+              <CandlestickChart
+                selectedMAs={selectedMAs}
+                setSelectedMAs={setSelectedMAs}
+                cycles={cycles}
+                selectedPositions={selectedPositions}
+                selectedStrategy={selectedStrategy}
+                candleLimit={candleLimit}
+                setCandleLimit={setCandleLimit}
+              />
+            )}
 
-          {showCycles && (
-            <CyclesPanel
-              onCyclesChange={setCycles}
-              onStrategyChange={handleStrategyChange}
-              onPositionsVisualize={setSelectedPositions}
-              initialStrategy={selectedStrategy}
-              strategies={strategies}
-              strategiesLoading={strategiesLoading}
-            />
-          )}
-        </>
-      ) : activeTab === 'strategies' ? (
-        <StrategyManager
-          strategies={strategies}
-          onStrategyChange={handleStrategyChange}
-          onRefresh={loadStrategies}
-        />
-      ) : (
-        <WalletManager />
-      )}
+            {showCycles && (
+              <CyclesPanel
+                onCyclesChange={setCycles}
+                onStrategyChange={handleStrategyChange}
+                onPositionsVisualize={setSelectedPositions}
+                initialStrategy={selectedStrategy}
+                strategies={strategies}
+                strategiesLoading={strategiesLoading}
+              />
+            )}
+          </>
+        ) : activeTab === 'strategies' ? (
+          <StrategyManager
+            strategies={strategies}
+            onStrategyChange={handleStrategyChange}
+            onRefresh={loadStrategies}
+          />
+        ) : activeTab === 'wallets' ? (
+          <WalletManager />
+        ) : activeTab === 'monitor' ? (
+          <CycleMonitor />
+        ) : null}
+      </div>
 
       {/* Liquidation Curve Overlay */}
       {showLiquidationOverlay && (
