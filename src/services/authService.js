@@ -6,7 +6,7 @@
 
 // Determine API base URL - use window.location for production, localhost for development
 const API_BASE_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
-  ? `${window.location.protocol}//${window.location.hostname}:8080`
+  ? `${window.location.protocol}//${window.location.hostname}`
   : 'http://localhost:8080'
 
 /**
