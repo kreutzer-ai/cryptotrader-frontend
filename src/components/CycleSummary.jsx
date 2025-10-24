@@ -14,16 +14,7 @@ const CycleSummary = ({ cycleData }) => {
     return `${(parseFloat(value) * 100).toFixed(2)}%`
   }
 
-  const calculateTotalFees = () => {
-    if (!cycleData.positions || cycleData.positions.length === 0) {
-      return 0
-    }
-    return cycleData.positions.reduce((total, pos) => {
-      return total + (pos.accumulatedBorrowFees || 0) + (pos.buySellFees || 0) + (pos.liquidationFees || 0)
-    }, 0)
-  }
-
-  const totalFees = calculateTotalFees()
+  const totalFees = (cycleData.totalOpenFees || 0) + (cycleData.totalCloseFees || 0) + (cycleData.totalBorrowFees || 0)
   const pnlColor = cycleData.totalPnl >= 0 ? 'positive' : 'negative'
 
   return (
@@ -54,7 +45,7 @@ const CycleSummary = ({ cycleData }) => {
 
         <div className="summary-item">
           <label>Invested</label>
-          <div className="value">{formatCurrency(cycleData.profitThresholdAmount)}</div>
+          <div className="value">{formatCurrency(cycleData.totalInvested)}</div>
         </div>
 
         <div className="summary-item">
@@ -66,9 +57,23 @@ const CycleSummary = ({ cycleData }) => {
         </div>
 
         <div className="summary-item">
-          <label>Fees</label>
+          <label>Open Fees</label>
           <div className="value negative">
-            {formatCurrency(totalFees)}
+            {formatCurrency(cycleData.totalOpenFees)}
+          </div>
+        </div>
+
+        <div className="summary-item">
+          <label>Close Fees</label>
+          <div className="value negative">
+            {formatCurrency(cycleData.totalCloseFees)}
+          </div>
+        </div>
+
+        <div className="summary-item">
+          <label>Borrow Fees</label>
+          <div className="value negative">
+            {formatCurrency(cycleData.totalBorrowFees)}
           </div>
         </div>
 

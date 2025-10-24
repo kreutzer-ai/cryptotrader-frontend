@@ -31,6 +31,19 @@ const PositionList = ({ cycleData }) => {
     return date.toLocaleTimeString()
   }
 
+  const formatDateTime = (isoString) => {
+    if (!isoString) return 'N/A'
+    const date = new Date(isoString)
+    return date.toLocaleString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
+  }
+
   const calculateTimeHeld = (openTime) => {
     if (!openTime) return 'N/A'
     const openDate = new Date(openTime)
@@ -68,11 +81,7 @@ const PositionList = ({ cycleData }) => {
                   {getDirectionBadge(position.direction)}
                   <span className="entry-price">@ {formatCurrency(position.entryPrice)}</span>
                   <span className="position-meta">
-                    {formatTime(position.openTime)} | Size: {formatCurrency(position.positionSize)} | Collateral: {formatCurrency(position.collateral)} | Fees: {formatCurrency(
-                      (position.accumulatedBorrowFees || 0) +
-                      (position.buySellFees || 0) +
-                      (position.liquidationFees || 0)
-                    )}
+                    {formatDateTime(position.openTime)} | Size: {formatCurrency(position.positionSize)} | Collateral: {formatCurrency(position.collateral)} | Open: {formatCurrency(position.openFee)} | Close: {formatCurrency(position.closeFee)} | Borrow: {formatCurrency(position.accumulatedBorrowFees || 0)}
                   </span>
                 </div>
 
@@ -110,12 +119,12 @@ const PositionList = ({ cycleData }) => {
 
                     <div className="detail-item">
                       <label>Opening Fee</label>
-                      <div className="value negative">-$0.80</div>
+                      <div className="value negative">{formatCurrency(position.openFee)}</div>
                     </div>
 
                     <div className="detail-item">
                       <label>Closing Fee</label>
-                      <div className="value negative">-$0.80</div>
+                      <div className="value negative">{formatCurrency(position.closeFee)}</div>
                     </div>
 
                     <div className="detail-item">
@@ -127,7 +136,7 @@ const PositionList = ({ cycleData }) => {
 
                     <div className="detail-item">
                       <label>Opened</label>
-                      <div className="value">{formatTime(position.openTime)}</div>
+                      <div className="value">{formatDateTime(position.openTime)}</div>
                     </div>
 
                     <div className="detail-item">
