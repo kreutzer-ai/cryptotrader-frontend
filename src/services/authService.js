@@ -1,17 +1,81 @@
 /**
- * Authentication service for managing user credentials
- * Uses sessionStorage to store credentials (cleared on browser close)
+ * Authentication service for managing JWT tokens
+ * Access token: stored in sessionStorage (memory), expires in 15 minutes
+ * Refresh token: stored in httpOnly cookie (automatic), expires in 7 days
  */
 
+// Determine API base URL - use window.location for production, localhost for development
+const API_BASE_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+  ? `${window.location.protocol}//${window.location.hostname}:8080`
+  : 'http://localhost:8080'
+
 /**
- * Store user credentials in sessionStorage
- * @param {string} username 
- * @param {string} password 
+ * Login with username and password
+ * @param {string} username
+ * @param {string} password
+ * @returns {Promise<Object>} Auth response with tokens
  */
-export const setCredentials = (username, password) => {
-  const encoded = btoa(`${username}:${password}`)
-  sessionStorage.setItem('auth', encoded)
-  sessionStorage.setItem('username', username)
+export const login = async (username, password) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Include cookies (refresh token)
+      body: JSON.stringify({ username, password }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Login failed')
+    }
+
+    const data = await response.json()
+
+    // Store access token in sessionStorage
+    sessionStorage.setItem('accessToken', data.accessToken)
+    sessionStorage.setItem('username', data.username)
+    sessionStorage.setItem('tokenExpiry', Date.now() + data.expiresIn * 1000)
+
+    return data
+  } catch (error) {
+    console.error('Login error:', error)
+    throw error
+  }
+}
+
+/**
+ * Refresh access token using refresh token from cookie
+ * @returns {Promise<Object>} New access token
+ */
+export const refreshToken = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Include refresh token cookie
+    })
+
+    if (!response.ok) {
+      // Refresh failed, user needs to re-login
+      logout()
+      throw new Error('Token refresh failed')
+    }
+
+    const data = await response.json()
+
+    // Update access token
+    sessionStorage.setItem('accessToken', data.accessToken)
+    sessionStorage.setItem('tokenExpiry', Date.now() + data.expiresIn * 1000)
+
+    return data
+  } catch (error) {
+    console.error('Token refresh error:', error)
+    throw error
+  }
 }
 
 /**
@@ -19,16 +83,36 @@ export const setCredentials = (username, password) => {
  * @returns {Object} Authorization header object or empty object
  */
 export const getAuthHeader = () => {
-  const auth = sessionStorage.getItem('auth')
-  return auth ? { 'Authorization': `Basic ${auth}` } : {}
+  const token = sessionStorage.getItem('accessToken')
+  return token ? { 'Authorization': `Bearer ${token}` } : {}
+}
+
+/**
+ * Get access token
+ * @returns {string|null} Access token or null
+ */
+export const getAccessToken = () => {
+  return sessionStorage.getItem('accessToken')
 }
 
 /**
  * Check if user is authenticated
- * @returns {boolean} True if credentials are stored
+ * @returns {boolean} True if access token exists
  */
 export const isAuthenticated = () => {
-  return sessionStorage.getItem('auth') !== null
+  return sessionStorage.getItem('accessToken') !== null
+}
+
+/**
+ * Check if token is expired
+ * @returns {boolean} True if token is expired or about to expire (within 1 minute)
+ */
+export const isTokenExpired = () => {
+  const expiry = sessionStorage.getItem('tokenExpiry')
+  if (!expiry) return true
+
+  // Refresh if token expires within 1 minute
+  return Date.now() > parseInt(expiry) - 60000
 }
 
 /**
@@ -40,12 +124,38 @@ export const getUsername = () => {
 }
 
 /**
- * Clear credentials and reload page
+ * Get current user object
+ * @returns {Object|null} User object with username or null if not authenticated
  */
-export const logout = () => {
-  sessionStorage.removeItem('auth')
-  sessionStorage.removeItem('username')
-  window.location.reload()
+export const getCurrentUser = () => {
+  const username = sessionStorage.getItem('username')
+  return username ? { username } : null
+}
+
+/**
+ * Logout and clear tokens
+ */
+export const logout = async () => {
+  try {
+    // Call logout endpoint to blacklist tokens
+    await fetch(`${API_BASE_URL}/api/auth/logout`, {
+      method: 'POST',
+      headers: {
+        ...getAuthHeader(),
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+  } catch (error) {
+    console.error('Logout error:', error)
+  } finally {
+    // Clear local storage
+    sessionStorage.removeItem('accessToken')
+    sessionStorage.removeItem('username')
+    sessionStorage.removeItem('tokenExpiry')
+    // Redirect to root (/) without query params to avoid redirect loop
+    window.location.href = '/'
+  }
 }
 
 /**

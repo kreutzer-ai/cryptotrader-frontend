@@ -1,11 +1,15 @@
 import axios from 'axios'
 import { getAuthHeader } from './authService'
+import { setupApiInterceptor } from './apiInterceptor'
 
 // Use relative URL - Vite proxy will forward to localhost:8080
 const CRYPTOTRADER_API_BASE = '/api/cryptotrader/v1'
 
 // Solana mint address
 const SOL_MINT = 'So11111111111111111111111111111111111111112'
+
+// Setup JWT token refresh interceptor
+setupApiInterceptor(axios)
 
 // Configure axios to include auth headers
 axios.interceptors.request.use(

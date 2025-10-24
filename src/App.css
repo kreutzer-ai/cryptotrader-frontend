@@ -106,7 +106,7 @@
 }
 
 .logout-btn {
-  background: #ef5350;
+  background: #757575;
   color: white;
   border: none;
   padding: 6px 14px;
@@ -119,11 +119,11 @@
 }
 
 .logout-btn:hover {
-  background: #e53935;
+  background: #616161;
 }
 
 .logout-btn:active {
-  background: #d32f2f;
+  background: #424242;
 }
 
 @media (max-width: 768px) {
@@ -146,4 +146,6 @@
     width: 100%;
   }
 }
+
+
 

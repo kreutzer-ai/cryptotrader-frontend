@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { setCredentials } from '../services/authService'
+import { login } from '../services/authService'
 import './Login.css'
 
 const Login = ({ onLogin }) => {
@@ -14,26 +14,13 @@ const Login = ({ onLogin }) => {
     setLoading(true)
 
     try {
-      // Test authentication with a simple API call
-      const authHeader = `Basic ${btoa(`${username}:${password}`)}`
-      const response = await fetch('/api/cryptotrader/v1/price/current/So11111111111111111111111111111111111111112', {
-        headers: {
-          'Authorization': authHeader
-        }
-      })
-
-      if (response.ok) {
-        // Authentication successful - store credentials
-        setCredentials(username, password)
-        onLogin()
-      } else if (response.status === 401) {
-        setError('Invalid username or password')
-      } else {
-        setError('Login failed. Please try again.')
-      }
+      // Login with JWT
+      await login(username, password)
+      // Authentication successful - redirect to dashboard
+      onLogin()
     } catch (err) {
       console.error('Login error:', err)
-      setError('Connection error. Please check your network.')
+      setError(err.message || 'Login failed. Please try again.')
     } finally {
       setLoading(false)
     }

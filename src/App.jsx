@@ -7,12 +7,36 @@ import CyclesPanel from './components/CyclesPanel'
 import StrategyManager from './components/StrategyManager'
 import WalletManager from './components/WalletManager'
 import CycleMonitor from './components/CycleMonitor'
+import UserManager from './components/UserManager'
 import LiquidationCurveOverlay from './components/LiquidationCurveOverlay'
+import Login from './components/Login'
 import { fetchStrategies } from './services/cryptotraderApi'
+import { isAuthenticated, logout, getCurrentUser } from './services/authService'
 import './App.css'
 
 function App() {
   console.log('App component rendering')
+  const [isLoggedIn, setIsLoggedIn] = useState(isAuthenticated())
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // Monitor authentication state changes
+  useEffect(() => {
+    const checkAuth = () => {
+      const authenticated = isAuthenticated()
+      setIsLoggedIn(authenticated)
+      console.log('Auth state updated:', authenticated)
+
+      // Check if user is admin
+      const currentUser = getCurrentUser()
+      setIsAdmin(currentUser?.username === 'admin')
+    }
+
+    // Check auth on mount and when storage changes
+    checkAuth()
+    window.addEventListener('storage', checkAuth)
+
+    return () => window.removeEventListener('storage', checkAuth)
+  }, [])
 
   // Initialize from URL params or use defaults
   const getInitialMAs = () => {
@@ -67,10 +91,12 @@ function App() {
   const [strategiesLoading, setStrategiesLoading] = useState(false)
   const [showLiquidationOverlay, setShowLiquidationOverlay] = useState(false)
 
-  // Load strategies on mount
+  // Load strategies on mount (only if authenticated)
   useEffect(() => {
-    loadStrategies()
-  }, [])
+    if (isLoggedIn) {
+      loadStrategies()
+    }
+  }, [isLoggedIn])
 
   const loadStrategies = async () => {
     setStrategiesLoading(true)
@@ -141,6 +167,29 @@ function App() {
     window.history.replaceState({}, '', newUrl)
   }, [selectedMAs, candleLimit, selectedStrategy])
 
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+    setIsLoggedIn(false)
+  }
+
+  // Handle successful login
+  const handleLoginSuccess = () => {
+    setIsLoggedIn(true)
+    // Clear URL params after login to avoid redirect loops
+    window.history.replaceState({}, '', '/')
+  }
+
+  // Show login screen if not authenticated
+  if (!isLoggedIn) {
+    return <Login onLogin={handleLoginSuccess} />
+  }
+
+  // User is authenticated, show dashboard
   return (
     <div className="app">
       <header className="app-header">
@@ -173,6 +222,14 @@ function App() {
             >
               Cycle Monitor
             </button>
+            {isAdmin && (
+              <button
+                className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
+                onClick={() => setActiveTab('users')}
+              >
+                Users
+              </button>
+            )}
             <button
               className="tab-btn"
               onClick={() => setShowLiquidationOverlay(true)}
@@ -193,6 +250,11 @@ function App() {
               <span className="checkbox-label">Show Strategies</span>
             </label>
           )}
+
+          {/* Logout Button */}
+          <button className="logout-btn" onClick={handleLogout} title="Sign out">
+            Logout
+          </button>
         </div>
       </header>
 
@@ -262,6 +324,8 @@ function App() {
           <WalletManager />
         ) : activeTab === 'monitor' ? (
           <CycleMonitor />
+        ) : activeTab === 'users' ? (
+          <UserManager />
         ) : null}
       </div>
 
