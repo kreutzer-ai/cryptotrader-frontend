@@ -16,13 +16,16 @@ import './App.css'
 
 function App() {
   console.log('App component rendering')
-  const [isLoggedIn, setIsLoggedIn] = useState(isAuthenticated())
+  // In development, skip login requirement
+  const isDev = import.meta.env.DEV
+  const [isLoggedIn, setIsLoggedIn] = useState(isDev ? true : isAuthenticated())
   const [isAdmin, setIsAdmin] = useState(false)
 
   // Monitor authentication state changes
   useEffect(() => {
     const checkAuth = () => {
-      const authenticated = isAuthenticated()
+      // In development, always consider user logged in
+      const authenticated = isDev ? true : isAuthenticated()
       setIsLoggedIn(authenticated)
       console.log('Auth state updated:', authenticated)
 
