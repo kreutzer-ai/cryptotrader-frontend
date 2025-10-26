@@ -42,11 +42,14 @@ export function PriceRangePnLChart({ cycleId, currentPrice }) {
       setLoading(true)
       setError(null)
 
+      const authHeader = getAuthHeader()
+      console.log('Price Range PnL - Auth header:', authHeader)
+
       const response = await fetch(
         `/api/cryptotrader/v1/cycles/${cycleId}/price-range-pnl?` +
         `minPrice=${min}&maxPrice=${max}&stepSize=${step}`,
         {
-          headers: getAuthHeader()
+          headers: authHeader
         }
       )
 
