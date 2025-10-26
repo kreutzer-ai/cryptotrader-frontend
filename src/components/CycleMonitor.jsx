@@ -16,7 +16,8 @@ const CycleMonitor = () => {
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState(3) // seconds
   const [lastUpdated, setLastUpdated] = useState(null)
-  const [activeTab, setActiveTab] = useState('overview') // 'overview' or 'price-range'
+  const [activeTab, setActiveTab] = useState('overview')
+  const [showPriceRangeModal, setShowPriceRangeModal] = useState(false) // 'overview' or 'price-range'
 
   // Load strategies on mount
   useEffect(() => {
@@ -180,8 +181,9 @@ const CycleMonitor = () => {
               📊 Overview
             </button>
             <button
-              className={`tab-button ${activeTab === 'price-range' ? 'active' : ''}`}
-              onClick={() => setActiveTab('price-range')}
+              className="tab-button"
+              onClick={() => setShowPriceRangeModal(true)}
+              title="Open price range analysis in modal"
             >
               📈 Price Range Analysis
             </button>
@@ -195,13 +197,31 @@ const CycleMonitor = () => {
                 <PositionList cycleData={cycleData} />
               </>
             )}
-            {activeTab === 'price-range' && (
-              <PriceRangePnLChart
-                cycleId={activeCycle.id}
-                currentPrice={cycleData.currentPrice}
-              />
-            )}
           </div>
+
+          {/* Price Range Modal */}
+          {showPriceRangeModal && (
+            <div className="modal-overlay" onClick={() => setShowPriceRangeModal(false)}>
+              <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2>📈 Price Range PnL Analysis</h2>
+                  <button
+                    className="modal-close-btn"
+                    onClick={() => setShowPriceRangeModal(false)}
+                    title="Close"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="modal-content">
+                  <PriceRangePnLChart
+                    cycleId={activeCycle.id}
+                    currentPrice={cycleData.currentPrice}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <div className="loading-message">Loading cycle data...</div>
