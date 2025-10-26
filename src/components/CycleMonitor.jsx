@@ -16,8 +16,7 @@ const CycleMonitor = () => {
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState(3) // seconds
   const [lastUpdated, setLastUpdated] = useState(null)
-  const [activeTab, setActiveTab] = useState('overview')
-  const [showPriceRangeModal, setShowPriceRangeModal] = useState(false) // 'overview' or 'price-range'
+  const [activeTab, setActiveTab] = useState('overview') // 'overview' or 'price-range'
 
   // Load strategies on mount
   useEffect(() => {
@@ -181,9 +180,8 @@ const CycleMonitor = () => {
               📊 Overview
             </button>
             <button
-              className="tab-button"
-              onClick={() => setShowPriceRangeModal(true)}
-              title="Open price range analysis in modal"
+              className={`tab-button ${activeTab === 'priceRange' ? 'active' : ''}`}
+              onClick={() => setActiveTab('priceRange')}
             >
               📈 Price Range Analysis
             </button>
@@ -191,29 +189,24 @@ const CycleMonitor = () => {
 
           {/* Tab Content */}
           <div className="cycle-monitor-content">
-            {activeTab === 'overview' && (
-              <>
-                <CycleSummary cycleData={cycleData} />
-                <PositionList cycleData={cycleData} />
-              </>
-            )}
+            <CycleSummary cycleData={cycleData} />
+            <PositionList cycleData={cycleData} />
           </div>
 
-          {/* Price Range Modal */}
-          {showPriceRangeModal && (
-            <div className="modal-overlay" onClick={() => setShowPriceRangeModal(false)}>
-              <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header">
-                  <h2>📈 Price Range PnL Analysis</h2>
+          {/* Price Range Overlay */}
+          {activeTab === 'priceRange' && (
+            <div className="price-range-overlay">
+              <div className="price-range-box">
+                <div className="price-range-box-header">
+                  <h3>📈 Price Range PnL Analysis</h3>
                   <button
-                    className="modal-close-btn"
-                    onClick={() => setShowPriceRangeModal(false)}
-                    title="Close"
+                    className="close-overlay-btn"
+                    onClick={() => setActiveTab('overview')}
                   >
                     ✕
                   </button>
                 </div>
-                <div className="modal-content">
+                <div className="price-range-box-content">
                   <PriceRangePnLChart
                     cycleId={activeCycle.id}
                     currentPrice={cycleData.currentPrice}

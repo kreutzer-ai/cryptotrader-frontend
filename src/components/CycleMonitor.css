@@ -214,103 +214,86 @@
   background: transparent;
 }
 
-/* Modal Styles */
-.modal-overlay {
+/* Price Range Overlay */
+.price-range-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  padding: 20px;
-  width: 100vw;
-  height: 100vh;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  pointer-events: none;
 }
 
-.modal-container {
+.price-range-box {
+  width: 90vw;
+  height: 60vh;
   background: white;
+  border: 2px solid #e0e0e0;
   border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
-  max-width: 90vw;
-  max-height: 90vh;
-  width: 1200px;
+  pointer-events: all;
   overflow: hidden;
 }
 
-.modal-header {
+.price-range-box-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 12px 16px;
   border-bottom: 1px solid #e0e0e0;
   background: #fafafa;
+  flex-shrink: 0;
+  z-index: 10;
 }
 
-.modal-header h2 {
+.price-range-box-header h3 {
   margin: 0;
-  font-size: 18px;
-  color: #333;
+  font-size: 14px;
   font-weight: 600;
+  color: #333;
 }
 
-.modal-close-btn {
+.close-overlay-btn {
   background: none;
   border: none;
-  font-size: 24px;
+  font-size: 20px;
   color: #999;
   cursor: pointer;
   padding: 0;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
 }
 
-.modal-close-btn:hover {
+.close-overlay-btn:hover {
   color: #333;
   background: #e0e0e0;
   border-radius: 4px;
 }
 
-.modal-content {
+.price-range-box-content {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-content .price-range-chart {
-  margin: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-content .chart-container {
-  flex: 1;
-  margin-bottom: 0;
+  overflow-x: hidden;
+  min-height: 0;
 }
 
 @media (max-width: 768px) {
-  .modal-container {
-    width: 95vw;
-    max-height: 95vh;
+  .price-range-overlay {
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
   }
 
-  .modal-header h2 {
-    font-size: 16px;
-  }
-
-  .modal-content {
-    padding: 12px;
+  .price-range-box {
+    width: 100%;
+    max-height: 400px;
   }
 }
+
+

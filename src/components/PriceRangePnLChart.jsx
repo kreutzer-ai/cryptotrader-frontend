@@ -109,10 +109,6 @@ export function PriceRangePnLChart({ cycleId, currentPrice }) {
 
   return (
     <div className="price-range-chart">
-      <div className="chart-header">
-        <h3>📊 Price Range PnL Analysis</h3>
-        <p className="subtitle">Total cycle gain/loss across different price levels</p>
-      </div>
 
       {/* Controls */}
       <div className="chart-controls">
@@ -158,7 +154,7 @@ export function PriceRangePnLChart({ cycleId, currentPrice }) {
 
       {/* Chart */}
       <div className="chart-container">
-        <ResponsiveContainer width="100%" height={400}>
+        <ResponsiveContainer width="100%" height="90%">
           <ComposedChart data={data} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
             <XAxis
