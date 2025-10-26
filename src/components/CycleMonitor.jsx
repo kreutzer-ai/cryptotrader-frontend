@@ -3,6 +3,7 @@ import { fetchStrategies } from '../services/cryptotraderApi'
 import { fetchActiveCycleForStrategy, fetchCycleCurrentValue } from '../services/cryptotraderApi'
 import CycleSummary from './CycleSummary'
 import PositionList from './PositionList'
+import { PriceRangePnLChart } from './PriceRangePnLChart'
 import './CycleMonitor.css'
 
 const CycleMonitor = () => {
@@ -15,6 +16,7 @@ const CycleMonitor = () => {
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState(3) // seconds
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [activeTab, setActiveTab] = useState('overview') // 'overview' or 'price-range'
 
   // Load strategies on mount
   useEffect(() => {
@@ -168,10 +170,39 @@ const CycleMonitor = () => {
           <p>No active cycle for selected strategy</p>
         </div>
       ) : cycleData ? (
-        <div className="cycle-monitor-content">
-          <CycleSummary cycleData={cycleData} />
-          <PositionList cycleData={cycleData} />
-        </div>
+        <>
+          {/* Tabs */}
+          <div className="cycle-monitor-tabs">
+            <button
+              className={`tab-button ${activeTab === 'overview' ? 'active' : ''}`}
+              onClick={() => setActiveTab('overview')}
+            >
+              📊 Overview
+            </button>
+            <button
+              className={`tab-button ${activeTab === 'price-range' ? 'active' : ''}`}
+              onClick={() => setActiveTab('price-range')}
+            >
+              📈 Price Range Analysis
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          <div className="cycle-monitor-content">
+            {activeTab === 'overview' && (
+              <>
+                <CycleSummary cycleData={cycleData} />
+                <PositionList cycleData={cycleData} />
+              </>
+            )}
+            {activeTab === 'price-range' && (
+              <PriceRangePnLChart
+                cycleId={activeCycle.id}
+                currentPrice={cycleData.currentPrice}
+              />
+            )}
+          </div>
+        </>
       ) : (
         <div className="loading-message">Loading cycle data...</div>
       )}
