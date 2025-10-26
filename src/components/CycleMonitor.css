@@ -282,6 +282,20 @@
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-content .price-range-chart {
+  margin: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-content .chart-container {
+  flex: 1;
+  margin-bottom: 0;
 }
 
 @media (max-width: 768px) {
