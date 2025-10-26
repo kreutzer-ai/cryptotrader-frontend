@@ -10,6 +10,7 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
     walletId: '',
     mint: 'So11111111111111111111111111111111111111112', // SOL default
     strategyName: '',
+    strategyType: 'MOVING_AVERAGE_CYCLE', // New field to select strategy type
     enabled: false,
     testMode: true,
     baseCurrencyMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
@@ -24,7 +25,13 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
     trendChangeStrategy: false,
     leverage: '5.5',
     maxCapitalPerCycle: '',
-    simulatedBalance: '10000.00'
+    simulatedBalance: '10000.00',
+    // MA Derivation fields
+    maDerivationPeriod: '20',
+    longEntryThreshold: '0.15',
+    longExitThreshold: '0.05',
+    shortEntryThreshold: '-0.15',
+    shortExitThreshold: '-0.05'
   })
 
   const isEditMode = !!strategy
@@ -41,6 +48,7 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
         walletId: strategy.walletId?.toString() || '',
         mint: strategy.mint || 'So11111111111111111111111111111111111111112',
         strategyName: strategy.strategyName || '',
+        strategyType: strategy.strategyName || 'MOVING_AVERAGE_CYCLE',
         enabled: strategy.enabled || false,
         testMode: strategy.testMode !== undefined ? strategy.testMode : true,
         baseCurrencyMint: strategy.baseCurrencyMint || 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
@@ -55,7 +63,12 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
         trendChangeStrategy: strategy.trendChangeStrategy || false,
         leverage: strategy.leverage?.toString() || '5.5',
         maxCapitalPerCycle: strategy.maxCapitalPerCycle?.toString() || '',
-        simulatedBalance: strategy.simulatedBalance?.toString() || '10000.00'
+        simulatedBalance: strategy.simulatedBalance?.toString() || '10000.00',
+        maDerivationPeriod: strategy.maDerivationPeriod?.toString() || '20',
+        longEntryThreshold: strategy.longEntryThreshold?.toString() || '0.15',
+        longExitThreshold: strategy.longExitThreshold?.toString() || '0.05',
+        shortEntryThreshold: strategy.shortEntryThreshold?.toString() || '-0.15',
+        shortExitThreshold: strategy.shortExitThreshold?.toString() || '-0.05'
       })
     }
   }, [strategy])
@@ -88,22 +101,34 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
       const payload = {
         ...(!isEditMode && { walletId: parseInt(formData.walletId) }),
         ...(!isEditMode && { mint: formData.mint }),
-        ...(!isEditMode && { strategyName: formData.strategyName }),
+        ...(!isEditMode && { strategyName: formData.strategyType }), // Use strategyType as strategyName
         enabled: formData.enabled,
         testMode: formData.testMode,
         baseCurrencyMint: formData.baseCurrencyMint,
         capitalAllocationPercent: parseFloat(formData.capitalAllocationPercent),
         reserveSol: parseFloat(formData.reserveSol),
         profitThreshold: parseFloat(formData.profitThreshold),
-        shortMaPeriod: parseInt(formData.shortMaPeriod),
-        longMaPeriod: parseInt(formData.longMaPeriod),
-        cycleBalanceAfter: parseInt(formData.cycleBalanceAfter),
-        cycleMaxDuration: parseInt(formData.cycleMaxDuration),
-        positionOpenInterval: parseInt(formData.positionOpenInterval),
-        trendChangeStrategy: formData.trendChangeStrategy,
         leverage: parseFloat(formData.leverage),
         ...(formData.maxCapitalPerCycle && { maxCapitalPerCycle: parseFloat(formData.maxCapitalPerCycle) }),
         simulatedBalance: parseFloat(formData.simulatedBalance)
+      }
+
+      // Add strategy-specific fields based on type
+      if (formData.strategyType === 'MA_DERIVATION') {
+        // MA Derivation strategy fields
+        payload.maDerivationPeriod = parseInt(formData.maDerivationPeriod)
+        payload.longEntryThreshold = parseFloat(formData.longEntryThreshold)
+        payload.longExitThreshold = parseFloat(formData.longExitThreshold)
+        payload.shortEntryThreshold = parseFloat(formData.shortEntryThreshold)
+        payload.shortExitThreshold = parseFloat(formData.shortExitThreshold)
+      } else {
+        // MA Crossover strategy fields
+        payload.shortMaPeriod = parseInt(formData.shortMaPeriod)
+        payload.longMaPeriod = parseInt(formData.longMaPeriod)
+        payload.cycleBalanceAfter = parseInt(formData.cycleBalanceAfter)
+        payload.cycleMaxDuration = parseInt(formData.cycleMaxDuration)
+        payload.positionOpenInterval = parseInt(formData.positionOpenInterval)
+        payload.trendChangeStrategy = formData.trendChangeStrategy
       }
 
       let result
@@ -162,19 +187,23 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="strategyName">Strategy Name *</label>
-              <input
-                type="text"
-                id="strategyName"
-                name="strategyName"
-                value={formData.strategyName}
+              <label htmlFor="strategyType">Strategy Type *</label>
+              <select
+                id="strategyType"
+                name="strategyType"
+                value={formData.strategyType}
                 onChange={handleChange}
-                placeholder="e.g., Fast-5-25-1min"
-                pattern="^[A-Za-z0-9_-]+$"
-                title="Only letters, numbers, underscores, and hyphens"
                 required
                 disabled={isEditMode}
-              />
+              >
+                <option value="MOVING_AVERAGE_CYCLE">MA Crossover (Time-based/Trend)</option>
+                <option value="MA_DERIVATION">MA Derivation (Momentum)</option>
+              </select>
+              <small>
+                {formData.strategyType === 'MA_DERIVATION'
+                  ? 'Trade based on MA rate of change (momentum)'
+                  : 'Trade based on MA crossovers'}
+              </small>
             </div>
           </div>
 
@@ -316,103 +345,204 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
           </div>
         </div>
 
-        {/* Strategy Parameters */}
-        <div className="form-section">
-          <h3>Strategy Parameters</h3>
+        {/* Strategy Parameters - MA Derivation */}
+        {formData.strategyType === 'MA_DERIVATION' && (
+          <div className="form-section">
+            <h3>MA Derivation Parameters</h3>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="shortMaPeriod">Short MA Period</label>
-              <input
-                type="number"
-                id="shortMaPeriod"
-                name="shortMaPeriod"
-                value={formData.shortMaPeriod}
-                onChange={handleChange}
-                min="1"
-                max="50"
-                required
-              />
-              <small>Fast moving average (1-50 candles)</small>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="maDerivationPeriod">MA Period to Monitor</label>
+                <input
+                  type="number"
+                  id="maDerivationPeriod"
+                  name="maDerivationPeriod"
+                  value={formData.maDerivationPeriod}
+                  onChange={handleChange}
+                  min="1"
+                  max="200"
+                  required
+                />
+                <small>Which MA to monitor for rate of change (1-200)</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="leverage">Leverage</label>
+                <input
+                  type="number"
+                  id="leverage"
+                  name="leverage"
+                  value={formData.leverage}
+                  onChange={handleChange}
+                  min="0.1"
+                  step="0.1"
+                  required
+                />
+                <small>Position leverage multiplier</small>
+              </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="longMaPeriod">Long MA Period</label>
-              <input
-                type="number"
-                id="longMaPeriod"
-                name="longMaPeriod"
-                value={formData.longMaPeriod}
-                onChange={handleChange}
-                min="1"
-                max="50"
-                required
-              />
-              <small>Slow moving average (1-50 candles)</small>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="longEntryThreshold">LONG Entry Threshold (%)</label>
+                <input
+                  type="number"
+                  id="longEntryThreshold"
+                  name="longEntryThreshold"
+                  value={formData.longEntryThreshold}
+                  onChange={handleChange}
+                  step="0.01"
+                  required
+                />
+                <small>Enter LONG when MA Δ &gt; this (e.g., 0.15)</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="longExitThreshold">LONG Exit Threshold (%)</label>
+                <input
+                  type="number"
+                  id="longExitThreshold"
+                  name="longExitThreshold"
+                  value={formData.longExitThreshold}
+                  onChange={handleChange}
+                  step="0.01"
+                  required
+                />
+                <small>Exit LONG when MA Δ &lt; this (e.g., 0.05)</small>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="shortEntryThreshold">SHORT Entry Threshold (%)</label>
+                <input
+                  type="number"
+                  id="shortEntryThreshold"
+                  name="shortEntryThreshold"
+                  value={formData.shortEntryThreshold}
+                  onChange={handleChange}
+                  step="0.01"
+                  required
+                />
+                <small>Enter SHORT when MA Δ &lt; this (e.g., -0.15)</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="shortExitThreshold">SHORT Exit Threshold (%)</label>
+                <input
+                  type="number"
+                  id="shortExitThreshold"
+                  name="shortExitThreshold"
+                  value={formData.shortExitThreshold}
+                  onChange={handleChange}
+                  step="0.01"
+                  required
+                />
+                <small>Exit SHORT when MA Δ &gt; this (e.g., -0.05)</small>
+              </div>
             </div>
           </div>
+        )}
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="profitThreshold">Profit Threshold</label>
-              <input
-                type="number"
-                id="profitThreshold"
-                name="profitThreshold"
-                value={formData.profitThreshold}
-                onChange={handleChange}
-                min="0.0001"
-                step="0.0001"
-                required
-              />
-              <small>Close cycle at this profit (e.g., 0.08 = 8%)</small>
+        {/* Strategy Parameters - MA Crossover */}
+        {formData.strategyType === 'MOVING_AVERAGE_CYCLE' && (
+          <div className="form-section">
+            <h3>MA Crossover Parameters</h3>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="shortMaPeriod">Short MA Period</label>
+                <input
+                  type="number"
+                  id="shortMaPeriod"
+                  name="shortMaPeriod"
+                  value={formData.shortMaPeriod}
+                  onChange={handleChange}
+                  min="1"
+                  max="50"
+                  required
+                />
+                <small>Fast moving average (1-50 candles)</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="longMaPeriod">Long MA Period</label>
+                <input
+                  type="number"
+                  id="longMaPeriod"
+                  name="longMaPeriod"
+                  value={formData.longMaPeriod}
+                  onChange={handleChange}
+                  min="1"
+                  max="50"
+                  required
+                />
+                <small>Slow moving average (1-50 candles)</small>
+              </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="positionOpenInterval">Position Open Interval (min)</label>
-              <input
-                type="number"
-                id="positionOpenInterval"
-                name="positionOpenInterval"
-                value={formData.positionOpenInterval}
-                onChange={handleChange}
-                min="1"
-                required
-              />
-              <small>Minutes between opening positions</small>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="profitThreshold">Profit Threshold</label>
+                <input
+                  type="number"
+                  id="profitThreshold"
+                  name="profitThreshold"
+                  value={formData.profitThreshold}
+                  onChange={handleChange}
+                  min="0.0001"
+                  step="0.0001"
+                  required
+                />
+                <small>Close cycle at this profit (e.g., 0.08 = 8%)</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="positionOpenInterval">Position Open Interval (min)</label>
+                <input
+                  type="number"
+                  id="positionOpenInterval"
+                  name="positionOpenInterval"
+                  value={formData.positionOpenInterval}
+                  onChange={handleChange}
+                  min="1"
+                  required
+                />
+                <small>Minutes between opening positions</small>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="cycleMaxDuration">Cycle Max Duration (candles)</label>
+                <input
+                  type="number"
+                  id="cycleMaxDuration"
+                  name="cycleMaxDuration"
+                  value={formData.cycleMaxDuration}
+                  onChange={handleChange}
+                  min="1"
+                  required
+                />
+                <small>Maximum cycle length in 1-minute candles</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="cycleBalanceAfter">Cycle Balance After</label>
+                <input
+                  type="number"
+                  id="cycleBalanceAfter"
+                  name="cycleBalanceAfter"
+                  value={formData.cycleBalanceAfter}
+                  onChange={handleChange}
+                  min="1"
+                  required
+                />
+                <small>Candles before balancing activates</small>
+              </div>
             </div>
           </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="cycleMaxDuration">Cycle Max Duration (candles)</label>
-              <input
-                type="number"
-                id="cycleMaxDuration"
-                name="cycleMaxDuration"
-                value={formData.cycleMaxDuration}
-                onChange={handleChange}
-                min="1"
-                required
-              />
-              <small>Maximum cycle length in 1-minute candles</small>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="cycleBalanceAfter">Cycle Balance After</label>
-              <input
-                type="number"
-                id="cycleBalanceAfter"
-                name="cycleBalanceAfter"
-                value={formData.cycleBalanceAfter}
-                onChange={handleChange}
-                min="1"
-                required
-              />
-              <small>Candles before balancing activates</small>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Test Mode Settings */}
         {formData.testMode && (
