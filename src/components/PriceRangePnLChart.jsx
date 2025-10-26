@@ -11,6 +11,7 @@ import {
   ReferenceLine,
   ComposedChart
 } from 'recharts'
+import { getAuthHeader } from '../services/authService'
 import './PriceRangePnLChart.css'
 
 /**
@@ -43,7 +44,10 @@ export function PriceRangePnLChart({ cycleId, currentPrice }) {
 
       const response = await fetch(
         `/api/cryptotrader/v1/cycles/${cycleId}/price-range-pnl?` +
-        `minPrice=${min}&maxPrice=${max}&stepSize=${step}`
+        `minPrice=${min}&maxPrice=${max}&stepSize=${step}`,
+        {
+          headers: getAuthHeader()
+        }
       )
 
       if (!response.ok) {
