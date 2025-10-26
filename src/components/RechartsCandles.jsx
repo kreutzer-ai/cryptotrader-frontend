@@ -21,6 +21,7 @@ const RechartsCandles = ({ selectedMAs, setSelectedMAs, cycles = [], candleLimit
   const [error, setError] = useState(null)
   const [lastUpdate, setLastUpdate] = useState(null)
   const [stats, setStats] = useState(null)
+  const [selectedMADerivations, setSelectedMADerivations] = useState([]) // MA derivations to display
 
   const presetLimits = [
     { label: '1h', value: 60 },
@@ -55,9 +56,27 @@ const RechartsCandles = ({ selectedMAs, setSelectedMAs, cycles = [], candleLimit
         }
 
         // Transform data for Recharts
-        const transformed = data.map(candle => {
+        const transformed = data.map((candle, index) => {
           // candle.time is already a Unix timestamp in milliseconds
           const timestamp = typeof candle.time === 'number' ? candle.time : new Date(candle.time).getTime()
+
+          // Calculate MA derivations (compare with previous candle)
+          const maDerivations = {}
+          const maDerivationPercents = {}
+          if (index > 0 && candle.movingAverages) {
+            const prevCandle = data[index - 1]
+            if (prevCandle && prevCandle.movingAverages) {
+              Object.entries(candle.movingAverages).forEach(([period, currentMA]) => {
+                const prevMA = prevCandle.movingAverages[period]
+                if (prevMA) {
+                  const derivation = currentMA - prevMA
+                  const derivationPercent = (derivation / prevMA) * 100
+                  maDerivations[period] = derivation
+                  maDerivationPercents[period] = derivationPercent
+                }
+              })
+            }
+          }
 
           return {
             time: timestamp,
@@ -74,7 +93,14 @@ const RechartsCandles = ({ selectedMAs, setSelectedMAs, cycles = [], candleLimit
             // MA values
             ...Object.fromEntries(
               Object.entries(candle.movingAverages || {}).map(([period, value]) => [`ma${period}`, value])
-            )
+            ),
+            // MA derivation percentage values (for chart lines)
+            ...Object.fromEntries(
+              Object.entries(maDerivationPercents).map(([period, value]) => [`maDeriv${period}`, value])
+            ),
+            // MA derivations (for tooltip)
+            maDerivations,
+            maDerivationPercents
           }
         })
 
@@ -176,6 +202,19 @@ const RechartsCandles = ({ selectedMAs, setSelectedMAs, cycles = [], candleLimit
     if (!active || !payload || !payload[0]) return null
 
     const data = payload[0].payload
+
+    const getDerivationIndicator = (percent) => {
+      if (!percent) return '→'
+      if (percent > 0) return '↑'
+      if (percent < 0) return '↓'
+      return '→'
+    }
+
+    const formatDerivationPercent = (percent) => {
+      if (!percent) return '0.00%'
+      return percent >= 0 ? `+${percent.toFixed(2)}%` : `${percent.toFixed(2)}%`
+    }
+
     return (
       <div className="custom-tooltip">
         <p className="time">{data.timeStr}</p>
@@ -185,8 +224,20 @@ const RechartsCandles = ({ selectedMAs, setSelectedMAs, cycles = [], candleLimit
         <p className="price">C: ${data.close.toFixed(2)}</p>
         {selectedMAs.map(period => {
           const value = data[`ma${period}`]
+          const derivationPercent = data.maDerivationPercents?.[period]
+          const indicator = getDerivationIndicator(derivationPercent)
+
           if (value) {
-            return <p key={period} className="ma">MA{period}: ${value.toFixed(2)}</p>
+            return (
+              <p key={period} className="ma">
+                MA{period}: ${value.toFixed(2)}
+                {derivationPercent !== undefined && (
+                  <span className={`ma-deriv ${derivationPercent > 0 ? 'positive' : derivationPercent < 0 ? 'negative' : 'neutral'}`}>
+                    {' '}{indicator} {formatDerivationPercent(derivationPercent)}
+                  </span>
+                )}
+              </p>
+            )
           }
           return null
         })}
@@ -210,6 +261,27 @@ const RechartsCandles = ({ selectedMAs, setSelectedMAs, cycles = [], candleLimit
       default:
         return 'rgba(74, 144, 226, 0.1)'
     }
+  }
+
+  // MA Derivation management
+  const handleAddMADerivation = (period) => {
+    if (period && !selectedMADerivations.includes(period)) {
+      setSelectedMADerivations([...selectedMADerivations, period].sort((a, b) => a - b))
+    }
+  }
+
+  const handleRemoveMADerivation = (period) => {
+    setSelectedMADerivations(selectedMADerivations.filter(p => p !== period))
+  }
+
+  const getAvailableMADerivationPeriods = () => {
+    // Get all MA periods that have derivation data
+    if (candleData.length === 0) return []
+    const latestCandle = candleData[candleData.length - 1]
+    if (!latestCandle || !latestCandle.maDerivationPercents) return []
+
+    const allPeriods = Object.keys(latestCandle.maDerivationPercents).map(p => parseInt(p))
+    return allPeriods.filter(p => !selectedMADerivations.includes(p)).sort((a, b) => a - b)
   }
 
   if (loading) {
@@ -280,6 +352,52 @@ const RechartsCandles = ({ selectedMAs, setSelectedMAs, cycles = [], candleLimit
               ))}
             </div>
           </div>
+
+          {/* MA Derivation Controls */}
+          <div className="ma-deriv-controls">
+            <label className="control-label">MA Derivations:</label>
+            <select
+              className="ma-deriv-dropdown"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleAddMADerivation(Number(e.target.value))
+                  e.target.value = ''
+                }
+              }}
+            >
+              <option value="">Add Derivation</option>
+              {getAvailableMADerivationPeriods().map(period => (
+                <option key={period} value={period}>MA{period} Δ</option>
+              ))}
+            </select>
+
+            {/* MA Derivation Chips */}
+            {selectedMADerivations.length > 0 && (
+              <div className="ma-deriv-chips">
+                {selectedMADerivations.map((period, index) => {
+                  const colors = ['#9c27b0', '#e91e63', '#ff5722', '#795548', '#607d8b']
+                  const color = colors[index % colors.length]
+                  return (
+                    <div
+                      key={period}
+                      className="ma-deriv-chip"
+                      style={{ borderColor: color, color: color }}
+                    >
+                      <span>MA{period} Δ</span>
+                      <button
+                        className="ma-deriv-remove-btn"
+                        onClick={() => handleRemoveMADerivation(period)}
+                        title={`Remove MA${period} derivation`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -299,11 +417,23 @@ const RechartsCandles = ({ selectedMAs, setSelectedMAs, cycles = [], candleLimit
           />
           
           <YAxis
+            yAxisId="price"
             domain={['auto', 'auto']}
             tick={{ fontSize: 11 }}
             tickFormatter={(value) => `$${value.toFixed(2)}`}
           />
-          
+
+          {/* Second Y-axis for MA derivations (percentage) */}
+          {selectedMADerivations.length > 0 && (
+            <YAxis
+              yAxisId="derivation"
+              orientation="right"
+              domain={['auto', 'auto']}
+              tick={{ fontSize: 11 }}
+              tickFormatter={(value) => `${value.toFixed(2)}%`}
+            />
+          )}
+
           <Tooltip content={<CustomTooltip />} />
           
           {/* Cycle period backgrounds */}
@@ -337,8 +467,9 @@ const RechartsCandles = ({ selectedMAs, setSelectedMAs, cycles = [], candleLimit
             dataKey="high"
             fill="transparent"
             shape={<CandleShape />}
+            yAxisId="price"
           />
-          
+
           {/* Moving averages */}
           {selectedMAs.map((period, index) => {
             const colors = ['#1976d2', '#f57c00', '#388e3c', '#d32f2f', '#7b1fa2']
@@ -351,6 +482,25 @@ const RechartsCandles = ({ selectedMAs, setSelectedMAs, cycles = [], candleLimit
                 strokeWidth={2}
                 dot={false}
                 name={`MA${period}`}
+                yAxisId="price"
+              />
+            )
+          })}
+
+          {/* MA Derivations (percentage change per minute) */}
+          {selectedMADerivations.map((period, index) => {
+            const colors = ['#9c27b0', '#e91e63', '#ff5722', '#795548', '#607d8b']
+            return (
+              <Line
+                key={`deriv-${period}`}
+                type="monotone"
+                dataKey={`maDeriv${period}`}
+                stroke={colors[index % colors.length]}
+                strokeWidth={1.5}
+                strokeDasharray="5 5"
+                dot={false}
+                name={`MA${period} Δ%`}
+                yAxisId="derivation"
               />
             )
           })}

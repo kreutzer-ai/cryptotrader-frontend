@@ -137,6 +137,92 @@
   color: #1976d2;
 }
 
+.custom-tooltip .ma-deriv {
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.custom-tooltip .ma-deriv.positive {
+  color: #2e7d32;
+}
+
+.custom-tooltip .ma-deriv.negative {
+  color: #c62828;
+}
+
+.custom-tooltip .ma-deriv.neutral {
+  color: #666;
+}
+
+/* MA Derivation Controls */
+.ma-deriv-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding-left: 20px;
+  border-left: 1px solid #d0d0d0;
+}
+
+.ma-deriv-dropdown {
+  padding: 4px 8px;
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  background: white;
+  color: #333333;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+  min-width: 140px;
+}
+
+.ma-deriv-dropdown:hover {
+  border-color: #999999;
+}
+
+.ma-deriv-dropdown:focus {
+  border-color: #666666;
+}
+
+.ma-deriv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ma-deriv-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1.5px solid;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: white;
+}
+
+.ma-deriv-chip span {
+  font-weight: 600;
+}
+
+.ma-deriv-remove-btn {
+  background: none;
+  border: none;
+  color: #999999;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+  transition: color 0.2s;
+}
+
+.ma-deriv-remove-btn:hover {
+  color: #c62828;
+}
+
 .last-update {
   text-align: right;
   margin-top: 8px;

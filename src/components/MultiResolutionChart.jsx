@@ -21,6 +21,7 @@ const MultiResolutionChart = ({
   const [selectedPosition, setSelectedPosition] = useState(null) // For showing threshold lines
   const [showPositions, setShowPositions] = useState(true) // Toggle position markers visibility
   const [showCandles, setShowCandles] = useState(true) // Toggle candle/line visibility
+  const [selectedMADerivations, setSelectedMADerivations] = useState([]) // MA derivations to display
   const chartRef = useRef(null)
   const prevDataRef = useRef(null)
 
@@ -38,6 +39,23 @@ const MultiResolutionChart = ({
   const getAvailableMAPeriods = () => {
     const allPeriods = Array.from({ length: 200 }, (_, i) => i + 1)
     return allPeriods.filter(p => !selectedMAs.includes(p))
+  }
+
+  // MA Derivation management
+  const handleAddMADerivation = (period) => {
+    if (period && !selectedMADerivations.includes(period)) {
+      setSelectedMADerivations([...selectedMADerivations, period].sort((a, b) => a - b))
+    }
+  }
+
+  const handleRemoveMADerivation = (period) => {
+    setSelectedMADerivations(selectedMADerivations.filter(p => p !== period))
+  }
+
+  const getAvailableMADerivationPeriods = () => {
+    // Return all periods 1-200 that aren't already selected
+    const allPeriods = Array.from({ length: 200 }, (_, i) => i + 1)
+    return allPeriods.filter(p => !selectedMADerivations.includes(p))
   }
 
   // Resolution-specific presets
@@ -170,12 +188,34 @@ const MultiResolutionChart = ({
         } else {
           // Fetch 1-minute candles (existing)
           data = await fetchCandles(mint, candleLimit)
-          
-          const dataWithMs = data.map(candle => ({
-            ...candle,
-            time: candle.time * 1000,
-            type: 'candle'
-          }))
+
+          const dataWithMs = data.map((candle, index) => {
+            // Calculate MA derivations (compare with previous candle)
+            const maDerivations = {}
+            const maDerivationPercents = {}
+            if (index > 0 && candle.movingAverages) {
+              const prevCandle = data[index - 1]
+              if (prevCandle && prevCandle.movingAverages) {
+                Object.entries(candle.movingAverages).forEach(([period, currentMA]) => {
+                  const prevMA = prevCandle.movingAverages[period]
+                  if (prevMA) {
+                    const derivation = currentMA - prevMA
+                    const derivationPercent = (derivation / prevMA) * 100
+                    maDerivations[period] = derivation
+                    maDerivationPercents[period] = derivationPercent
+                  }
+                })
+              }
+            }
+
+            return {
+              ...candle,
+              time: candle.time * 1000,
+              type: 'candle',
+              maDerivations,
+              maDerivationPercents
+            }
+          })
           setChartData(dataWithMs)
 
           // Calculate stats from latest candle
@@ -576,7 +616,28 @@ const MultiResolutionChart = ({
           data: chartData.map(c => [c.time, c.movingAverages?.[period] || null]),
           smooth: true,
           symbol: 'none',
-          lineStyle: { color: colors[index % colors.length], width: 2 }
+          lineStyle: { color: colors[index % colors.length], width: 2 },
+          yAxisIndex: 0
+        })
+      })
+    }
+
+    // Add MA derivation lines only for 1-min candles
+    if (!is15Sec && selectedMADerivations && selectedMADerivations.length > 0) {
+      const colors = ['#9c27b0', '#e91e63', '#ff5722', '#795548', '#607d8b']
+      selectedMADerivations.forEach((period, index) => {
+        series.push({
+          name: `MA${period} Δ%`,
+          type: 'line',
+          data: chartData.map(c => [c.time, c.maDerivationPercents?.[String(period)] || null]),
+          smooth: true,
+          symbol: 'none',
+          lineStyle: {
+            color: colors[index % colors.length],
+            width: 1.5,
+            type: 'dashed'
+          },
+          yAxisIndex: 1
         })
       })
     }
@@ -603,16 +664,31 @@ const MultiResolutionChart = ({
         axisLabel: { color: '#666' },
         axisLine: { lineStyle: { color: '#ddd' } }
       },
-      yAxis: {
-        type: 'value',
-        scale: true,
-        axisLabel: {
-          color: '#666',
-          formatter: (value) => `$${value.toFixed(2)}`
+      yAxis: [
+        {
+          type: 'value',
+          scale: true,
+          position: 'left',
+          axisLabel: {
+            color: '#666',
+            formatter: (value) => `$${value.toFixed(2)}`
+          },
+          axisLine: { lineStyle: { color: '#ddd' } },
+          splitLine: { lineStyle: { color: '#f0f0f0' } }
         },
-        axisLine: { lineStyle: { color: '#ddd' } },
-        splitLine: { lineStyle: { color: '#f0f0f0' } }
-      },
+        // Second Y-axis for MA derivations (percentage)
+        ...(selectedMADerivations.length > 0 ? [{
+          type: 'value',
+          scale: true,
+          position: 'right',
+          axisLabel: {
+            color: '#9c27b0',
+            formatter: (value) => `${value.toFixed(2)}%`
+          },
+          axisLine: { lineStyle: { color: '#ddd' } },
+          splitLine: { show: false }
+        }] : [])
+      ],
       dataZoom: [
         { type: 'inside', start: 0, end: 100 },
         {
@@ -626,7 +702,7 @@ const MultiResolutionChart = ({
       ],
       series
     }
-  }, [chartData, resolution, selectedMAs, showCandles, prepareMarkAreas, preparePositionMarkers, prepareThresholdLines])
+  }, [chartData, resolution, selectedMAs, selectedMADerivations, showCandles, prepareMarkAreas, preparePositionMarkers, prepareThresholdLines])
 
   return (
     <div className="multi-resolution-chart">
@@ -701,6 +777,54 @@ const MultiResolutionChart = ({
                     className="ma-remove-btn"
                     onClick={() => handleRemoveMA(period)}
                     title={`Remove MA${period}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* MA Derivation Selector - Only show for 1-min candles */}
+        {resolution === '1min' && (
+          <div className="ma-deriv-selector">
+            <label>Add MA Δ:</label>
+            <select
+              value=""
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleAddMADerivation(Number(e.target.value))
+                  e.target.value = ''
+                }
+              }}
+              className="ma-deriv-dropdown"
+            >
+              <option value="">Select MA Δ</option>
+              {getAvailableMADerivationPeriods().map(period => (
+                <option key={period} value={period}>MA{period} Δ</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* MA Derivation Chips - Only show for 1-min candles */}
+        {resolution === '1min' && selectedMADerivations && selectedMADerivations.length > 0 && (
+          <div className="ma-deriv-chips">
+            {selectedMADerivations.map((period, index) => {
+              const colors = ['#9c27b0', '#e91e63', '#ff5722', '#795548', '#607d8b']
+              const color = colors[index % colors.length]
+              return (
+                <div
+                  key={period}
+                  className="ma-deriv-chip"
+                  style={{ borderColor: color, color: color }}
+                >
+                  <span>MA{period} Δ</span>
+                  <button
+                    className="ma-deriv-remove-btn"
+                    onClick={() => handleRemoveMADerivation(period)}
+                    title={`Remove MA${period} derivation`}
                   >
                     ×
                   </button>
