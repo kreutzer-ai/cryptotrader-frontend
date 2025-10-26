@@ -33,10 +33,15 @@ export const login = async (username, password) => {
 
     const data = await response.json()
 
+    console.log('Login response data:', data)
+    console.log('Access token from response:', data.accessToken)
+
     // Store access token in sessionStorage
     sessionStorage.setItem('accessToken', data.accessToken)
     sessionStorage.setItem('username', data.username)
     sessionStorage.setItem('tokenExpiry', Date.now() + data.expiresIn * 1000)
+
+    console.log('Token stored in sessionStorage:', sessionStorage.getItem('accessToken'))
 
     return data
   } catch (error) {
