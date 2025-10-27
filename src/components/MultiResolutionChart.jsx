@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { fetchCandles, fetchPriceTicks, fetch15SecCandles } from '../services/cryptotraderApi'
+import { fetchCandles, fetchPriceTicks, fetch15SecCandles, exportCandlesCsv, export15SecCandlesCsv, exportPriceTicksCsv, exportAllCandlesCsv, exportAll15SecCandlesCsv, exportAllPriceTicksCsv } from '../services/cryptotraderApi'
 import './MultiResolutionChart.css'
 
 const MultiResolutionChart = ({ 
@@ -22,8 +22,12 @@ const MultiResolutionChart = ({
   const [showPositions, setShowPositions] = useState(true) // Toggle position markers visibility
   const [showCandles, setShowCandles] = useState(true) // Toggle candle/line visibility
   const [selectedMADerivations, setSelectedMADerivations] = useState([]) // MA derivations to display
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState(null)
+  const [showExportMenu, setShowExportMenu] = useState(false)
   const chartRef = useRef(null)
   const prevDataRef = useRef(null)
+  const SOL_MINT = 'So11111111111111111111111111111111111111112'
 
   // MA management
   const handleAddMA = (period) => {
@@ -56,6 +60,85 @@ const MultiResolutionChart = ({
     // Return all periods 1-200 that aren't already selected
     const allPeriods = Array.from({ length: 200 }, (_, i) => i + 1)
     return allPeriods.filter(p => !selectedMADerivations.includes(p))
+  }
+
+  // Export handlers
+  const handleExportCandles = async () => {
+    try {
+      setExporting(true)
+      setExportError(null)
+      await exportCandlesCsv(SOL_MINT, candleLimit)
+    } catch (err) {
+      console.error('Export error:', err)
+      setExportError(err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleExport15SecCandles = async () => {
+    try {
+      setExporting(true)
+      setExportError(null)
+      await export15SecCandlesCsv(SOL_MINT, candleLimit)
+    } catch (err) {
+      console.error('Export error:', err)
+      setExportError(err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleExportPriceTicks = async () => {
+    try {
+      setExporting(true)
+      setExportError(null)
+      await exportPriceTicksCsv(SOL_MINT, candleLimit)
+    } catch (err) {
+      console.error('Export error:', err)
+      setExportError(err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleExportAllCandles = async () => {
+    try {
+      setExporting(true)
+      setExportError(null)
+      await exportAllCandlesCsv(SOL_MINT)
+    } catch (err) {
+      console.error('Export error:', err)
+      setExportError(err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleExportAll15SecCandles = async () => {
+    try {
+      setExporting(true)
+      setExportError(null)
+      await exportAll15SecCandlesCsv(SOL_MINT)
+    } catch (err) {
+      console.error('Export error:', err)
+      setExportError(err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleExportAllPriceTicks = async () => {
+    try {
+      setExporting(true)
+      setExportError(null)
+      await exportAllPriceTicksCsv(SOL_MINT)
+    } catch (err) {
+      console.error('Export error:', err)
+      setExportError(err.message)
+    } finally {
+      setExporting(false)
+    }
   }
 
   // Resolution-specific presets
@@ -858,6 +941,96 @@ const MultiResolutionChart = ({
           >
             {showPositions ? 'Hide Positions' : 'Show Positions'}
           </button>
+        </div>
+
+        {/* Export Menu */}
+        <div className="export-menu-container">
+          <button
+            className="export-menu-btn"
+            onClick={() => setShowExportMenu(!showExportMenu)}
+            disabled={exporting}
+            title="Export data as CSV"
+          >
+            {exporting ? '⏳ Exporting...' : '📥 Export'}
+          </button>
+
+          {showExportMenu && (
+            <div className="export-dropdown">
+              <div className="export-section">
+                <div className="export-section-title">Shown Data</div>
+                <button
+                  className="export-menu-item"
+                  onClick={() => {
+                    handleExportCandles()
+                    setShowExportMenu(false)
+                  }}
+                  disabled={exporting || !chartData.length}
+                >
+                  1-min Candles
+                </button>
+                <button
+                  className="export-menu-item"
+                  onClick={() => {
+                    handleExport15SecCandles()
+                    setShowExportMenu(false)
+                  }}
+                  disabled={exporting || !chartData.length}
+                >
+                  15-sec Candles
+                </button>
+                <button
+                  className="export-menu-item"
+                  onClick={() => {
+                    handleExportPriceTicks()
+                    setShowExportMenu(false)
+                  }}
+                  disabled={exporting || !chartData.length}
+                >
+                  Price Ticks
+                </button>
+              </div>
+
+              <div className="export-section">
+                <div className="export-section-title">All Data</div>
+                <button
+                  className="export-menu-item export-menu-item-all"
+                  onClick={() => {
+                    handleExportAllCandles()
+                    setShowExportMenu(false)
+                  }}
+                  disabled={exporting}
+                >
+                  1-min Candles (All)
+                </button>
+                <button
+                  className="export-menu-item export-menu-item-all"
+                  onClick={() => {
+                    handleExportAll15SecCandles()
+                    setShowExportMenu(false)
+                  }}
+                  disabled={exporting}
+                >
+                  15-sec Candles (All)
+                </button>
+                <button
+                  className="export-menu-item export-menu-item-all"
+                  onClick={() => {
+                    handleExportAllPriceTicks()
+                    setShowExportMenu(false)
+                  }}
+                  disabled={exporting}
+                >
+                  Price Ticks (All)
+                </button>
+              </div>
+            </div>
+          )}
+
+          {exportError && (
+            <div className="export-error" title={exportError}>
+              ⚠️ {exportError}
+            </div>
+          )}
         </div>
 
         {/* Stats Display - Inline */}

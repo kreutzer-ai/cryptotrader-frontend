@@ -305,3 +305,224 @@ export const fetchActiveCycleForStrategy = async (strategyId) => {
     throw new Error('Failed to fetch active cycle')
   }
 }
+
+// ============================================================================
+// CSV EXPORT FUNCTIONS
+// ============================================================================
+
+/**
+ * Export recent price ticks as CSV
+ * @param {string} mint - Token mint address (default: SOL)
+ * @param {number} limit - Number of ticks to export (default: 100)
+ * @param {string} filename - Optional filename for download
+ */
+export const exportPriceTicksCsv = async (mint = SOL_MINT, limit = 100, filename = null) => {
+  try {
+    const url = `${CRYPTOTRADER_API_BASE}/price/ticks/${mint}/export?limit=${limit}`
+    const response = await axios.get(url, {
+      responseType: 'blob',
+      headers: { 'Accept': 'text/csv' }
+    })
+
+    const downloadFilename = filename || `price-ticks-${mint.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.csv`
+    downloadBlob(response.data, downloadFilename)
+  } catch (error) {
+    console.error('Error exporting price ticks:', error)
+    throw new Error('Failed to export price ticks')
+  }
+}
+
+/**
+ * Export price ticks in time range as CSV
+ * @param {string} mint - Token mint address (default: SOL)
+ * @param {number} startTime - Start timestamp (Unix seconds)
+ * @param {number} endTime - End timestamp (Unix seconds)
+ * @param {string} filename - Optional filename for download
+ */
+export const exportPriceTicksRangeCsv = async (mint = SOL_MINT, startTime, endTime, filename = null) => {
+  try {
+    const url = `${CRYPTOTRADER_API_BASE}/price/ticks/${mint}/export/range?startTime=${startTime}&endTime=${endTime}`
+    const response = await axios.get(url, {
+      responseType: 'blob',
+      headers: { 'Accept': 'text/csv' }
+    })
+
+    const downloadFilename = filename || `price-ticks-${mint.slice(0, 8)}-range-${new Date().toISOString().slice(0, 10)}.csv`
+    downloadBlob(response.data, downloadFilename)
+  } catch (error) {
+    console.error('Error exporting price ticks range:', error)
+    throw new Error('Failed to export price ticks range')
+  }
+}
+
+/**
+ * Export recent 15-second candles as CSV
+ * @param {string} mint - Token mint address (default: SOL)
+ * @param {number} limit - Number of candles to export (default: 240 = 1 hour)
+ * @param {string} filename - Optional filename for download
+ */
+export const export15SecCandlesCsv = async (mint = SOL_MINT, limit = 240, filename = null) => {
+  try {
+    const url = `${CRYPTOTRADER_API_BASE}/price/candles-15sec/${mint}/export?limit=${limit}`
+    const response = await axios.get(url, {
+      responseType: 'blob',
+      headers: { 'Accept': 'text/csv' }
+    })
+
+    const downloadFilename = filename || `candles-15sec-${mint.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.csv`
+    downloadBlob(response.data, downloadFilename)
+  } catch (error) {
+    console.error('Error exporting 15-second candles:', error)
+    throw new Error('Failed to export 15-second candles')
+  }
+}
+
+/**
+ * Export 15-second candles in time range as CSV
+ * @param {string} mint - Token mint address (default: SOL)
+ * @param {number} startTime - Start timestamp (Unix seconds)
+ * @param {number} endTime - End timestamp (Unix seconds)
+ * @param {string} filename - Optional filename for download
+ */
+export const export15SecCandlesRangeCsv = async (mint = SOL_MINT, startTime, endTime, filename = null) => {
+  try {
+    const url = `${CRYPTOTRADER_API_BASE}/price/candles-15sec/${mint}/export/range?startTime=${startTime}&endTime=${endTime}`
+    const response = await axios.get(url, {
+      responseType: 'blob',
+      headers: { 'Accept': 'text/csv' }
+    })
+
+    const downloadFilename = filename || `candles-15sec-${mint.slice(0, 8)}-range-${new Date().toISOString().slice(0, 10)}.csv`
+    downloadBlob(response.data, downloadFilename)
+  } catch (error) {
+    console.error('Error exporting 15-second candles range:', error)
+    throw new Error('Failed to export 15-second candles range')
+  }
+}
+
+/**
+ * Export recent 1-minute candles as CSV
+ * @param {string} mint - Token mint address (default: SOL)
+ * @param {number} limit - Number of candles to export (default: 60 = 1 hour)
+ * @param {string} filename - Optional filename for download
+ */
+export const exportCandlesCsv = async (mint = SOL_MINT, limit = 60, filename = null) => {
+  try {
+    const url = `${CRYPTOTRADER_API_BASE}/price/candles/${mint}/export?limit=${limit}`
+    const response = await axios.get(url, {
+      responseType: 'blob',
+      headers: { 'Accept': 'text/csv' }
+    })
+
+    const downloadFilename = filename || `candles-1min-${mint.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.csv`
+    downloadBlob(response.data, downloadFilename)
+  } catch (error) {
+    console.error('Error exporting 1-minute candles:', error)
+    throw new Error('Failed to export 1-minute candles')
+  }
+}
+
+/**
+ * Export 1-minute candles in time range as CSV
+ * @param {string} mint - Token mint address (default: SOL)
+ * @param {number} startTime - Start timestamp (Unix seconds)
+ * @param {number} endTime - End timestamp (Unix seconds)
+ * @param {string} filename - Optional filename for download
+ */
+export const exportCandlesRangeCsv = async (mint = SOL_MINT, startTime, endTime, filename = null) => {
+  try {
+    const url = `${CRYPTOTRADER_API_BASE}/price/candles/${mint}/export/range?startTime=${startTime}&endTime=${endTime}`
+    const response = await axios.get(url, {
+      responseType: 'blob',
+      headers: { 'Accept': 'text/csv' }
+    })
+
+    const downloadFilename = filename || `candles-1min-${mint.slice(0, 8)}-range-${new Date().toISOString().slice(0, 10)}.csv`
+    downloadBlob(response.data, downloadFilename)
+  } catch (error) {
+    console.error('Error exporting 1-minute candles range:', error)
+    throw new Error('Failed to export 1-minute candles range')
+  }
+}
+
+/**
+ * Export ALL 1-minute candles in database as CSV
+ * @param {string} mint - Token mint address (default: SOL)
+ * @param {string} filename - Optional filename for download
+ */
+export const exportAllCandlesCsv = async (mint = SOL_MINT, filename = null) => {
+  try {
+    // Use a very large limit to get all data (10000 should cover most cases)
+    const url = `${CRYPTOTRADER_API_BASE}/price/candles/${mint}/export?limit=10000`
+    const response = await axios.get(url, {
+      responseType: 'blob',
+      headers: { 'Accept': 'text/csv' }
+    })
+
+    const downloadFilename = filename || `candles-1min-${mint.slice(0, 8)}-ALL-${new Date().toISOString().slice(0, 10)}.csv`
+    downloadBlob(response.data, downloadFilename)
+  } catch (error) {
+    console.error('Error exporting all 1-minute candles:', error)
+    throw new Error('Failed to export all 1-minute candles')
+  }
+}
+
+/**
+ * Export ALL 15-second candles in database as CSV
+ * @param {string} mint - Token mint address (default: SOL)
+ * @param {string} filename - Optional filename for download
+ */
+export const exportAll15SecCandlesCsv = async (mint = SOL_MINT, filename = null) => {
+  try {
+    // Use a very large limit to get all data (50000 for 15-sec candles)
+    const url = `${CRYPTOTRADER_API_BASE}/price/candles-15sec/${mint}/export?limit=50000`
+    const response = await axios.get(url, {
+      responseType: 'blob',
+      headers: { 'Accept': 'text/csv' }
+    })
+
+    const downloadFilename = filename || `candles-15sec-${mint.slice(0, 8)}-ALL-${new Date().toISOString().slice(0, 10)}.csv`
+    downloadBlob(response.data, downloadFilename)
+  } catch (error) {
+    console.error('Error exporting all 15-second candles:', error)
+    throw new Error('Failed to export all 15-second candles')
+  }
+}
+
+/**
+ * Export ALL price ticks in database as CSV
+ * @param {string} mint - Token mint address (default: SOL)
+ * @param {string} filename - Optional filename for download
+ */
+export const exportAllPriceTicksCsv = async (mint = SOL_MINT, filename = null) => {
+  try {
+    // Use a very large limit to get all data (100000 for price ticks)
+    const url = `${CRYPTOTRADER_API_BASE}/price/ticks/${mint}/export?limit=100000`
+    const response = await axios.get(url, {
+      responseType: 'blob',
+      headers: { 'Accept': 'text/csv' }
+    })
+
+    const downloadFilename = filename || `ticks-${mint.slice(0, 8)}-ALL-${new Date().toISOString().slice(0, 10)}.csv`
+    downloadBlob(response.data, downloadFilename)
+  } catch (error) {
+    console.error('Error exporting all price ticks:', error)
+    throw new Error('Failed to export all price ticks')
+  }
+}
+
+/**
+ * Helper function to download blob as file
+ * @param {Blob} blob - Blob data to download
+ * @param {string} filename - Filename for download
+ */
+const downloadBlob = (blob, filename) => {
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}

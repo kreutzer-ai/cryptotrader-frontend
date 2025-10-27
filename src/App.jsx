@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import CandlestickChart from './components/CandlestickChart'
 import RechartsCandles from './components/RechartsCandles'
-import EChartsCandles from './components/EChartsCandles'
 import MultiResolutionChart from './components/MultiResolutionChart'
 import CyclesPanel from './components/CyclesPanel'
 import StrategyManager from './components/StrategyManager'
@@ -266,16 +265,6 @@ function App() {
           <>
             {chartType === 'multiresolution' ? (
               <MultiResolutionChart
-                selectedMAs={selectedMAs}
-                setSelectedMAs={setSelectedMAs}
-                cycles={cycles}
-                selectedPositions={selectedPositions}
-                selectedStrategy={selectedStrategy}
-                candleLimit={candleLimit}
-                setCandleLimit={setCandleLimit}
-              />
-            ) : chartType === 'echarts' ? (
-              <EChartsCandles
                 selectedMAs={selectedMAs}
                 setSelectedMAs={setSelectedMAs}
                 cycles={cycles}
