@@ -951,7 +951,7 @@ const MultiResolutionChart = ({
             disabled={exporting}
             title="Export data as CSV"
           >
-            {exporting ? '⏳ Exporting...' : '📥 Export'}
+            {exporting ? 'Exporting...' : 'Export'}
           </button>
 
           {showExportMenu && (
