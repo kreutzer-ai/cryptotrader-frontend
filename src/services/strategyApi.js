@@ -169,7 +169,7 @@ export const reactivateWallet = async (walletName) => {
  */
 export const fetchAllWallets = async () => {
   try {
-    const response = await axios.get(`${WALLET_API_BASE}/wallets/all`)
+    const response = await axios.get(`${WALLET_API_BASE}/wallets?includeInactive=true`)
     return response.data
   } catch (error) {
     console.error('Error fetching all wallets:', error)
@@ -196,7 +196,7 @@ export const calculateLiquidationLimit = async (leverage, entryPrice = null, dir
     if (direction !== null) {
       requestBody.direction = direction
     }
-    const response = await axios.post('/api/liquidation/calculate', requestBody)
+    const response = await axios.post('/api/jupiter/perps/v1/liquidation/calculate', requestBody)
     return response.data
   } catch (error) {
     console.error('Error calculating liquidation limit:', error)
@@ -210,7 +210,7 @@ export const calculateLiquidationLimit = async (leverage, entryPrice = null, dir
  */
 export const fetchLiquidationCurve = async () => {
   try {
-    const response = await axios.get('/api/liquidation/curve')
+    const response = await axios.get('/api/jupiter/perps/v1/liquidation/curve')
     return response.data
   } catch (error) {
     console.error('Error fetching liquidation curve:', error)

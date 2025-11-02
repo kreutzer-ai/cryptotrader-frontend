@@ -64,11 +64,112 @@ const PositionList = ({ cycleData }) => {
     return <span className={`direction-badge direction-${directionClass}`}>{direction}</span>
   }
 
+  // Separate open and closed positions
+  const openPositions = cycleData.positions.filter(p => p.status === 'OPEN')
+  const closedPositions = cycleData.positions.filter(p => p.status === 'CLOSED')
+
   return (
     <div className="position-list">
       <h3>Positions ({cycleData.openPositions} open / {cycleData.totalPositions} total)</h3>
 
-      <div className="positions-container">
+      {/* Open Positions Table */}
+      {openPositions.length > 0 && (
+        <div className="positions-section">
+          <h4>🟢 Open Positions ({openPositions.length})</h4>
+          <div className="positions-table-container">
+            <table className="positions-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Direction</th>
+                  <th>Start Time</th>
+                  <th>Entry Price</th>
+                  <th>Current Price</th>
+                  <th>Collateral</th>
+                  <th>Position Size</th>
+                  <th>Leverage</th>
+                  <th>Unrealized PnL</th>
+                  <th>Time Held</th>
+                </tr>
+              </thead>
+              <tbody>
+                {openPositions.map((position, index) => {
+                  const pnlColor = position.unrealizedPnl >= 0 ? 'positive' : 'negative'
+                  return (
+                    <tr key={position.positionId}>
+                      <td>{index + 1}</td>
+                      <td>{getDirectionBadge(position.direction)}</td>
+                      <td>{formatDateTime(position.openTime)}</td>
+                      <td>{formatCurrency(position.entryPrice)}</td>
+                      <td>{formatCurrency(position.currentPrice)}</td>
+                      <td>{formatCurrency(position.collateral)}</td>
+                      <td>{formatCurrency(position.positionSize)}</td>
+                      <td>{position.leverage}x</td>
+                      <td className={pnlColor}>
+                        {formatCurrency(position.unrealizedPnl)}
+                        <br />
+                        <small>({formatPercent(position.unrealizedPnlPercent)})</small>
+                      </td>
+                      <td>{calculateTimeHeld(position.openTime)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Closed Positions Table */}
+      {closedPositions.length > 0 && (
+        <div className="positions-section">
+          <h4>⚫ Closed Positions ({closedPositions.length})</h4>
+          <div className="positions-table-container">
+            <table className="positions-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Direction</th>
+                  <th>Start Time</th>
+                  <th>Close Time</th>
+                  <th>Entry Price</th>
+                  <th>Exit Price</th>
+                  <th>Collateral</th>
+                  <th>Position Size</th>
+                  <th>Realized PnL</th>
+                  <th>Close Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {closedPositions.map((position, index) => {
+                  const pnlColor = position.realizedPnl >= 0 ? 'positive' : 'negative'
+                  return (
+                    <tr key={position.positionId}>
+                      <td>{index + 1}</td>
+                      <td>{getDirectionBadge(position.direction)}</td>
+                      <td>{formatDateTime(position.openTime)}</td>
+                      <td>{formatDateTime(position.closeTime)}</td>
+                      <td>{formatCurrency(position.entryPrice)}</td>
+                      <td>{formatCurrency(position.exitPrice)}</td>
+                      <td>{formatCurrency(position.collateral)}</td>
+                      <td>{formatCurrency(position.positionSize)}</td>
+                      <td className={pnlColor}>
+                        {formatCurrency(position.realizedPnl)}
+                        <br />
+                        <small>({formatPercent(position.realizedPnlPercent)})</small>
+                      </td>
+                      <td><span className="close-reason">{position.closeReason || 'N/A'}</span></td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Old card view - keeping for reference but hidden */}
+      <div className="positions-container" style={{ display: 'none' }}>
         {cycleData.positions.map((position, index) => {
           const isExpanded = expandedPositions[position.positionId]
           const pnlColor = position.unrealizedPnl >= 0 ? 'positive' : 'negative'

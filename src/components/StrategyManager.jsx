@@ -172,12 +172,47 @@ const StrategyManager = ({ strategies, onStrategyChange, onRefresh }) => {
                       {strategy.mint === 'So11111111111111111111111111111111111111112' ? 'SOL' : 'Other'}
                     </span>
                   </div>
-                  <div className="info-item">
-                    <span className="info-label">MAs:</span>
-                    <span className="info-value">
-                      {strategy.shortMaPeriod}/{strategy.longMaPeriod}
-                    </span>
-                  </div>
+
+                  {/* MA Crossover specific fields */}
+                  {strategy.shortMaPeriod && strategy.longMaPeriod && (
+                    <div className="info-item">
+                      <span className="info-label">MAs:</span>
+                      <span className="info-value">
+                        {strategy.shortMaPeriod}/{strategy.longMaPeriod}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* MA Derivation specific fields */}
+                  {strategy.maDerivationPeriod && (
+                    <div className="info-item">
+                      <span className="info-label">MA Period:</span>
+                      <span className="info-value">{strategy.maDerivationPeriod}</span>
+                    </div>
+                  )}
+
+                  {/* PERIODIC_DUAL specific fields */}
+                  {strategy.periodicInterval && (
+                    <>
+                      <div className="info-item">
+                        <span className="info-label">Interval:</span>
+                        <span className="info-value">{strategy.periodicInterval} min</span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Time Window:</span>
+                        <span className="info-value">{strategy.periodicTimeWindow} min</span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Stop-Loss:</span>
+                        <span className="info-value">{strategy.periodicStoplossPercent}%</span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Max Positions:</span>
+                        <span className="info-value">{Math.ceil(strategy.periodicTimeWindow / strategy.periodicInterval) * 2}</span>
+                      </div>
+                    </>
+                  )}
+
                   <div className="info-item">
                     <span className="info-label">Leverage:</span>
                     <span className="info-value">{strategy.leverage}x</span>
@@ -190,14 +225,36 @@ const StrategyManager = ({ strategies, onStrategyChange, onRefresh }) => {
                     <span className="info-label">Capital:</span>
                     <span className="info-value">{strategy.capitalAllocationPercent}%</span>
                   </div>
-                  <div className="info-item">
-                    <span className="info-label">Max Duration:</span>
-                    <span className="info-value">{strategy.cycleMaxDuration} candles</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Trend Strategy:</span>
-                    <span className="info-value">{strategy.trendChangeStrategy ? 'Yes' : 'No'}</span>
-                  </div>
+
+                  {/* Show balance and open positions if available */}
+                  {strategy.balance !== undefined && (
+                    <div className="info-item">
+                      <span className="info-label">Balance:</span>
+                      <span className="info-value">${parseFloat(strategy.balance).toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {strategy.openPositions !== undefined && (
+                    <div className="info-item">
+                      <span className="info-label">Open Positions:</span>
+                      <span className="info-value">{strategy.openPositions}</span>
+                    </div>
+                  )}
+
+                  {/* MA Crossover specific fields */}
+                  {strategy.cycleMaxDuration && (
+                    <div className="info-item">
+                      <span className="info-label">Max Duration:</span>
+                      <span className="info-value">{strategy.cycleMaxDuration} candles</span>
+                    </div>
+                  )}
+
+                  {strategy.trendChangeStrategy !== undefined && (
+                    <div className="info-item">
+                      <span className="info-label">Trend Strategy:</span>
+                      <span className="info-value">{strategy.trendChangeStrategy ? 'Yes' : 'No'}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

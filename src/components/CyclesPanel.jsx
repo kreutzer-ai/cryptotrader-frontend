@@ -73,7 +73,7 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
   const loadActiveCycleValue = async (cycleId) => {
     try {
       console.log('Loading active cycle value for cycle:', cycleId)
-      const response = await fetch(`/api/cryptotrader/v1/cycles/${cycleId}/current-value`, {
+      const response = await fetch(`/api/cycles/v1/cycles/${cycleId}/current-value`, {
         headers: getAuthHeader()
       })
       if (!response.ok) {
@@ -141,7 +141,7 @@ const CyclesPanel = ({ onCyclesChange, onStrategyChange, onPositionsVisualize, i
 
   const loadCyclePositions = async (cycleId) => {
     try {
-      const response = await fetch(`/api/cryptotrader/v1/cycles/${cycleId}/positions`, {
+      const response = await fetch(`/api/cycles/v1/cycles/${cycleId}/positions`, {
         headers: getAuthHeader()
       })
       if (!response.ok) {

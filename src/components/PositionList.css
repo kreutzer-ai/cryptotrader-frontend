@@ -159,3 +159,88 @@
   color: #999;
   font-size: 0.7rem;
 }
+
+/* Table View Styles */
+.positions-section {
+  margin-bottom: 20px;
+}
+
+.positions-section h4 {
+  margin: 0 0 10px 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.positions-table-container {
+  overflow-x: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: white;
+}
+
+.positions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.positions-table thead {
+  background: #f5f5f5;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.positions-table th {
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #1a1a1a;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.positions-table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.positions-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.positions-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.positions-table td {
+  padding: 10px 12px;
+  color: #333;
+  vertical-align: middle;
+}
+
+.positions-table td.positive {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.positions-table td.negative {
+  color: #c62828;
+  font-weight: 600;
+}
+
+.positions-table small {
+  font-size: 0.65rem;
+  color: #666;
+  font-weight: normal;
+}
+
+.close-reason {
+  padding: 2px 6px;
+  background: #f5f5f5;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+}

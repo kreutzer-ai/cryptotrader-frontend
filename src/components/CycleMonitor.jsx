@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { fetchStrategies } from '../services/cryptotraderApi'
-import { fetchActiveCycleForStrategy, fetchCycleCurrentValue } from '../services/cryptotraderApi'
+import { fetchActiveCycleForStrategy, fetchCycleCurrentValue, fetchStrategyCurrentValue } from '../services/cryptotraderApi'
 import CycleSummary from './CycleSummary'
 import PositionList from './PositionList'
 import { PriceRangePnLChart } from './PriceRangePnLChart'
@@ -9,6 +9,7 @@ import './CycleMonitor.css'
 const CycleMonitor = () => {
   const [strategies, setStrategies] = useState([])
   const [selectedStrategyId, setSelectedStrategyId] = useState(null)
+  const [selectedStrategy, setSelectedStrategy] = useState(null)
   const [activeCycle, setActiveCycle] = useState(null)
   const [cycleData, setCycleData] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -25,7 +26,14 @@ const CycleMonitor = () => {
 
   // Auto-refresh cycle data
   useEffect(() => {
-    if (!autoRefresh || !selectedStrategyId || !activeCycle) {
+    if (!autoRefresh || !selectedStrategyId) {
+      return
+    }
+
+    // For cycle-based strategies, need active cycle
+    // For PERIODIC_DUAL, can refresh without cycle
+    const isPeriodic = selectedStrategy?.periodicInterval && selectedStrategy?.periodicTimeWindow
+    if (!isPeriodic && !activeCycle) {
       return
     }
 
@@ -34,7 +42,7 @@ const CycleMonitor = () => {
     }, refreshInterval * 1000)
 
     return () => clearInterval(interval)
-  }, [autoRefresh, selectedStrategyId, activeCycle, refreshInterval])
+  }, [autoRefresh, selectedStrategyId, activeCycle, refreshInterval, selectedStrategy])
 
   const loadStrategies = async () => {
     try {
@@ -55,7 +63,21 @@ const CycleMonitor = () => {
     setSelectedStrategyId(strategyId)
     setActiveCycle(null)
     setCycleData(null)
-    await loadActiveCycle(strategyId)
+
+    // Find the selected strategy
+    const strategy = strategies.find(s => s.id === parseInt(strategyId))
+    setSelectedStrategy(strategy)
+
+    // Check if it's a PERIODIC_DUAL strategy (cycle-less)
+    const isPeriodic = strategy?.periodicInterval && strategy?.periodicTimeWindow
+
+    if (isPeriodic) {
+      // For PERIODIC_DUAL, load strategy data directly
+      await loadStrategyData(strategyId)
+    } else {
+      // For cycle-based strategies, load active cycle
+      await loadActiveCycle(strategyId)
+    }
   }
 
   const loadActiveCycle = async (strategyId) => {
@@ -63,7 +85,7 @@ const CycleMonitor = () => {
       setLoading(true)
       setError(null)
       const cycle = await fetchActiveCycleForStrategy(strategyId)
-      
+
       if (cycle) {
         setActiveCycle(cycle)
         await refreshCycleData(cycle.id)
@@ -78,16 +100,45 @@ const CycleMonitor = () => {
     }
   }
 
-  const refreshCycleData = async (cycleId = null) => {
-    const id = cycleId || activeCycle?.id
-    if (!id) return
-
+  const loadStrategyData = async (strategyId) => {
     try {
-      const data = await fetchCycleCurrentValue(id)
+      setLoading(true)
+      setError(null)
+      const data = await fetchStrategyCurrentValue(strategyId)
       setCycleData(data)
       setLastUpdated(new Date())
     } catch (err) {
-      console.error('Error refreshing cycle data:', err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const refreshCycleData = async (cycleId = null) => {
+    // Check if it's a PERIODIC_DUAL strategy
+    const isPeriodic = selectedStrategy?.periodicInterval && selectedStrategy?.periodicTimeWindow
+
+    if (isPeriodic) {
+      // Refresh strategy data directly
+      try {
+        const data = await fetchStrategyCurrentValue(selectedStrategyId)
+        setCycleData(data)
+        setLastUpdated(new Date())
+      } catch (err) {
+        console.error('Error refreshing strategy data:', err)
+      }
+    } else {
+      // Refresh cycle data
+      const id = cycleId || activeCycle?.id
+      if (!id) return
+
+      try {
+        const data = await fetchCycleCurrentValue(id)
+        setCycleData(data)
+        setLastUpdated(new Date())
+      } catch (err) {
+        console.error('Error refreshing cycle data:', err)
+      }
     }
   }
 
@@ -165,9 +216,9 @@ const CycleMonitor = () => {
         </div>
       )}
 
-      {!activeCycle ? (
+      {!activeCycle && !cycleData ? (
         <div className="no-active-cycle">
-          <p>No active cycle for selected strategy</p>
+          <p>{selectedStrategy?.periodicInterval ? 'No data available for strategy' : 'No active cycle for selected strategy'}</p>
         </div>
       ) : cycleData ? (
         <>

@@ -3,7 +3,8 @@ import { getAuthHeader } from './authService'
 import { setupApiInterceptor } from './apiInterceptor'
 
 // Use relative URL - Vite proxy will forward to localhost:8080
-const CRYPTOTRADER_API_BASE = '/api/cryptotrader/v1'
+const CYCLES_API_BASE = '/api/cycles/v1'
+const JUPITER_PRICE_API_BASE = '/api/jupiter/price/v1'
 
 // Solana mint address
 const SOL_MINT = 'So11111111111111111111111111111111111111112'
@@ -24,15 +25,16 @@ axios.interceptors.request.use(
 )
 
 /**
- * Fetch candle data from CryptoTrader API
+ * Fetch candle data from Jupiter Price API
  * @param {string} mint - Token mint address (default: SOL)
  * @param {number} limit - Number of candles to fetch (default: 300)
+ * @param {string} interval - Candle interval: "15sec" or "1min" (default: "1min")
  * @returns {Promise<Array>} Array of candle data with MA indicators
  */
-export const fetchCandles = async (mint = SOL_MINT, limit = 300) => {
+export const fetchCandles = async (mint = SOL_MINT, limit = 300, interval = '1min') => {
   try {
-    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/price/candles/${mint}`, {
-      params: { limit }
+    const response = await axios.get(`${JUPITER_PRICE_API_BASE}/candles/${mint}`, {
+      params: { limit, interval }
     })
 
     // Transform CryptoTrader candle data to our format
@@ -88,7 +90,7 @@ export const fetchStrategies = async (filters = {}) => {
     if (filters.mint) params.mint = filters.mint
     if (filters.enabled !== undefined) params.enabled = filters.enabled
 
-    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/strategies`, { params })
+    const response = await axios.get('/api/strategy/v1/strategies', { params })
     return response.data
   } catch (error) {
     console.error('Error fetching strategies:', error)
@@ -113,7 +115,7 @@ export const fetchCycles = async (filters = {}) => {
     if (filters.mint) params.mint = filters.mint
     if (filters.status) params.status = filters.status
 
-    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/cycles`, { params })
+    const response = await axios.get(`${CYCLES_API_BASE}/cycles`, { params })
     return response.data
   } catch (error) {
     console.error('Error fetching cycles:', error)
@@ -127,7 +129,7 @@ export const fetchCycles = async (filters = {}) => {
  */
 export const fetchActiveCycles = async () => {
   try {
-    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/cycles/active`)
+    const response = await axios.get(`${CYCLES_API_BASE}/cycles/active`)
     return response.data
   } catch (error) {
     console.error('Error fetching active cycles:', error)
@@ -158,7 +160,7 @@ export const fetchCyclePositions = async (cycleId) => {
  */
 export const fetchPriceTicks = async (mint = SOL_MINT, limit = 100) => {
   try {
-    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/price/ticks/${mint}`, {
+    const response = await axios.get(`${JUPITER_PRICE_API_BASE}/ticks/${mint}`, {
       params: { limit }
     })
 
@@ -187,8 +189,8 @@ export const fetchPriceTicks = async (mint = SOL_MINT, limit = 100) => {
  */
 export const fetch15SecCandles = async (mint = SOL_MINT, limit = 240) => {
   try {
-    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/price/candles-15sec/${mint}`, {
-      params: { limit }
+    const response = await axios.get(`${JUPITER_PRICE_API_BASE}/candles/${mint}`, {
+      params: { limit, interval: '15sec' }
     })
 
     // Transform 15-sec candle data to our format
@@ -222,7 +224,7 @@ export const fetch15SecCandles = async (mint = SOL_MINT, limit = 240) => {
  */
 export const fetchPriceTicksRange = async (mint = SOL_MINT, startTime, endTime) => {
   try {
-    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/price/ticks/${mint}/range`, {
+    const response = await axios.get(`${JUPITER_PRICE_API_BASE}/ticks/${mint}/range`, {
       params: { startTime, endTime }
     })
 
@@ -250,8 +252,8 @@ export const fetchPriceTicksRange = async (mint = SOL_MINT, startTime, endTime) 
  */
 export const fetch15SecCandlesRange = async (mint = SOL_MINT, startTime, endTime) => {
   try {
-    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/price/candles-15sec/${mint}/range`, {
-      params: { startTime, endTime }
+    const response = await axios.get(`${JUPITER_PRICE_API_BASE}/candles/${mint}/range`, {
+      params: { startTime, endTime, interval: '15sec' }
     })
 
     const sortedData = response.data.sort((a, b) =>
@@ -281,7 +283,7 @@ export const fetch15SecCandlesRange = async (mint = SOL_MINT, startTime, endTime
  */
 export const fetchCycleCurrentValue = async (cycleId) => {
   try {
-    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/cycles/${cycleId}/current-value`)
+    const response = await axios.get(`${CYCLES_API_BASE}/cycles/${cycleId}/current-value`)
     return response.data
   } catch (error) {
     console.error(`Error fetching current value for cycle ${cycleId}:`, error)
@@ -296,7 +298,7 @@ export const fetchCycleCurrentValue = async (cycleId) => {
  */
 export const fetchActiveCycleForStrategy = async (strategyId) => {
   try {
-    const response = await axios.get(`${CRYPTOTRADER_API_BASE}/cycles`, {
+    const response = await axios.get(`${CYCLES_API_BASE}/cycles`, {
       params: { strategyConfigId: strategyId, status: 'ACTIVE' }
     })
     return response.data && response.data.length > 0 ? response.data[0] : null
@@ -318,7 +320,7 @@ export const fetchActiveCycleForStrategy = async (strategyId) => {
  */
 export const exportPriceTicksCsv = async (mint = SOL_MINT, limit = 100, filename = null) => {
   try {
-    const url = `${CRYPTOTRADER_API_BASE}/price/ticks/${mint}/export?limit=${limit}`
+    const url = `${JUPITER_PRICE_API_BASE}/ticks/${mint}/export?limit=${limit}`
     const response = await axios.get(url, {
       responseType: 'blob',
       headers: { 'Accept': 'text/csv' }
@@ -341,7 +343,7 @@ export const exportPriceTicksCsv = async (mint = SOL_MINT, limit = 100, filename
  */
 export const exportPriceTicksRangeCsv = async (mint = SOL_MINT, startTime, endTime, filename = null) => {
   try {
-    const url = `${CRYPTOTRADER_API_BASE}/price/ticks/${mint}/export/range?startTime=${startTime}&endTime=${endTime}`
+    const url = `${JUPITER_PRICE_API_BASE}/ticks/${mint}/export/range?startTime=${startTime}&endTime=${endTime}`
     const response = await axios.get(url, {
       responseType: 'blob',
       headers: { 'Accept': 'text/csv' }
@@ -363,7 +365,7 @@ export const exportPriceTicksRangeCsv = async (mint = SOL_MINT, startTime, endTi
  */
 export const export15SecCandlesCsv = async (mint = SOL_MINT, limit = 240, filename = null) => {
   try {
-    const url = `${CRYPTOTRADER_API_BASE}/price/candles-15sec/${mint}/export?limit=${limit}`
+    const url = `${JUPITER_PRICE_API_BASE}/candles/${mint}/export?interval=15sec&limit=${limit}`
     const response = await axios.get(url, {
       responseType: 'blob',
       headers: { 'Accept': 'text/csv' }
@@ -386,7 +388,7 @@ export const export15SecCandlesCsv = async (mint = SOL_MINT, limit = 240, filena
  */
 export const export15SecCandlesRangeCsv = async (mint = SOL_MINT, startTime, endTime, filename = null) => {
   try {
-    const url = `${CRYPTOTRADER_API_BASE}/price/candles-15sec/${mint}/export/range?startTime=${startTime}&endTime=${endTime}`
+    const url = `${JUPITER_PRICE_API_BASE}/candles/${mint}/export/range?interval=15sec&startTime=${startTime}&endTime=${endTime}`
     const response = await axios.get(url, {
       responseType: 'blob',
       headers: { 'Accept': 'text/csv' }
@@ -453,7 +455,7 @@ export const exportCandlesRangeCsv = async (mint = SOL_MINT, startTime, endTime,
 export const exportAllCandlesCsv = async (mint = SOL_MINT, filename = null) => {
   try {
     // Use a very large limit to get all data (10000 should cover most cases)
-    const url = `${CRYPTOTRADER_API_BASE}/price/candles/${mint}/export?limit=10000`
+    const url = `${JUPITER_PRICE_API_BASE}/candles/${mint}/export?interval=1min&limit=10000`
     const response = await axios.get(url, {
       responseType: 'blob',
       headers: { 'Accept': 'text/csv' }
@@ -525,4 +527,34 @@ const downloadBlob = (blob, filename) => {
   link.click()
   document.body.removeChild(link)
   window.URL.revokeObjectURL(url)
+}
+
+/**
+ * Fetch strategy current value for PERIODIC_DUAL strategies (cycle-less)
+ * @param {number} strategyId - Strategy ID
+ * @returns {Promise<Object>} Strategy current value with positions and PnL
+ */
+export const fetchStrategyCurrentValue = async (strategyId) => {
+  try {
+    const response = await axios.get(`/api/strategy/v1/strategies/${strategyId}/current-value`)
+    return response.data
+  } catch (error) {
+    console.error(`Error fetching current value for strategy ${strategyId}:`, error)
+    throw new Error('Failed to fetch strategy current value')
+  }
+}
+
+/**
+ * Fetch positions for a strategy (PERIODIC_DUAL - cycle-less)
+ * @param {number} strategyId - Strategy ID
+ * @returns {Promise<Array>} Array of positions
+ */
+export const fetchStrategyPositions = async (strategyId) => {
+  try {
+    const response = await axios.get(`/api/strategy/v1/strategies/${strategyId}/positions`)
+    return response.data
+  } catch (error) {
+    console.error(`Error fetching positions for strategy ${strategyId}:`, error)
+    throw new Error('Failed to fetch strategy positions')
+  }
 }

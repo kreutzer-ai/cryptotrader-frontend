@@ -9,7 +9,7 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
     walletId: '',
     mint: 'So11111111111111111111111111111111111111112', // SOL default
-    strategyName: '',
+    customName: '', // Custom display name for the strategy
     strategyType: 'MOVING_AVERAGE_CYCLE', // New field to select strategy type
     enabled: false,
     testMode: true,
@@ -24,6 +24,10 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
     positionOpenInterval: '1',
     trendChangeStrategy: false,
     leverage: '5.5',
+    // PERIODIC_DUAL fields
+    periodicInterval: '1',
+    periodicTimeWindow: '30',
+    periodicStoplossPercent: '-40.00',
     maxCapitalPerCycle: '',
     simulatedBalance: '10000.00',
     // MA Derivation fields
@@ -47,8 +51,10 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
       setFormData({
         walletId: strategy.walletId?.toString() || '',
         mint: strategy.mint || 'So11111111111111111111111111111111111111112',
-        strategyName: strategy.strategyName || '',
-        strategyType: strategy.strategyName || 'MOVING_AVERAGE_CYCLE',
+        customName: strategy.strategyName || '',
+        strategyType: ['MOVING_AVERAGE_CYCLE', 'MA_DERIVATION', 'PERIODIC_DUAL'].includes(strategy.strategyName)
+          ? 'MOVING_AVERAGE_CYCLE'
+          : strategy.strategyName?.includes('PERIODIC') ? 'PERIODIC_DUAL' : strategy.strategyName?.includes('DERIVATION') ? 'MA_DERIVATION' : 'MOVING_AVERAGE_CYCLE',
         enabled: strategy.enabled || false,
         testMode: strategy.testMode !== undefined ? strategy.testMode : true,
         baseCurrencyMint: strategy.baseCurrencyMint || 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
@@ -68,7 +74,10 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
         longEntryThreshold: strategy.longEntryThreshold?.toString() || '0.15',
         longExitThreshold: strategy.longExitThreshold?.toString() || '0.05',
         shortEntryThreshold: strategy.shortEntryThreshold?.toString() || '-0.15',
-        shortExitThreshold: strategy.shortExitThreshold?.toString() || '-0.05'
+        shortExitThreshold: strategy.shortExitThreshold?.toString() || '-0.05',
+        periodicInterval: strategy.periodicInterval?.toString() || '1',
+        periodicTimeWindow: strategy.periodicTimeWindow?.toString() || '30',
+        periodicStoplossPercent: strategy.periodicStoplossPercent?.toString() || '-40.00'
       })
     }
   }, [strategy])
@@ -101,7 +110,7 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
       const payload = {
         ...(!isEditMode && { walletId: parseInt(formData.walletId) }),
         ...(!isEditMode && { mint: formData.mint }),
-        ...(!isEditMode && { strategyName: formData.strategyType }), // Use strategyType as strategyName
+        ...(!isEditMode && { strategyName: formData.customName || formData.strategyType }), // Use custom name or fall back to type
         enabled: formData.enabled,
         testMode: formData.testMode,
         baseCurrencyMint: formData.baseCurrencyMint,
@@ -121,6 +130,11 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
         payload.longExitThreshold = parseFloat(formData.longExitThreshold)
         payload.shortEntryThreshold = parseFloat(formData.shortEntryThreshold)
         payload.shortExitThreshold = parseFloat(formData.shortExitThreshold)
+      } else if (formData.strategyType === 'PERIODIC_DUAL') {
+        // PERIODIC_DUAL strategy fields
+        payload.periodicInterval = parseInt(formData.periodicInterval)
+        payload.periodicTimeWindow = parseInt(formData.periodicTimeWindow)
+        payload.periodicStoplossPercent = parseFloat(formData.periodicStoplossPercent)
       } else {
         // MA Crossover strategy fields
         payload.shortMaPeriod = parseInt(formData.shortMaPeriod)
@@ -198,16 +212,35 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
               >
                 <option value="MOVING_AVERAGE_CYCLE">MA Crossover (Time-based/Trend)</option>
                 <option value="MA_DERIVATION">MA Derivation (Momentum)</option>
+                <option value="PERIODIC_DUAL">Periodic Dual (Fixed-Interval)</option>
               </select>
               <small>
                 {formData.strategyType === 'MA_DERIVATION'
                   ? 'Trade based on MA rate of change (momentum)'
+                  : formData.strategyType === 'PERIODIC_DUAL'
+                  ? 'Open LONG+SHORT pairs at fixed intervals'
                   : 'Trade based on MA crossovers'}
               </small>
             </div>
           </div>
 
           <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="customName">Strategy Name</label>
+              <input
+                type="text"
+                id="customName"
+                name="customName"
+                value={formData.customName}
+                onChange={handleChange}
+                placeholder={`e.g., ${formData.strategyType === 'PERIODIC_DUAL' ? 'PeriodicDual-SOL-1' : formData.strategyType === 'MA_DERIVATION' ? 'MADerivation-SOL-1' : 'MACrossover-SOL-1'}`}
+                pattern="^[A-Za-z0-9_-]*$"
+                maxLength="50"
+                disabled={isEditMode}
+              />
+              <small>Optional custom name (letters, numbers, - and _ only). Defaults to strategy type if empty.</small>
+            </div>
+
             <div className="form-group">
               <label htmlFor="mint">Token Mint *</label>
               <select
@@ -328,6 +361,23 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
               />
             </div>
 
+            <div className="form-group">
+              <label htmlFor="profitThreshold">Profit Threshold</label>
+              <input
+                type="number"
+                id="profitThreshold"
+                name="profitThreshold"
+                value={formData.profitThreshold}
+                onChange={handleChange}
+                min="0.0001"
+                step="0.0001"
+                required
+              />
+              <small>Close position at this profit (e.g., 0.08 = 8%)</small>
+            </div>
+          </div>
+
+          <div className="form-row">
             <div className="form-group">
               <label htmlFor="maxCapitalPerCycle">Max Capital Per Cycle</label>
               <input
@@ -483,21 +533,6 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="profitThreshold">Profit Threshold</label>
-                <input
-                  type="number"
-                  id="profitThreshold"
-                  name="profitThreshold"
-                  value={formData.profitThreshold}
-                  onChange={handleChange}
-                  min="0.0001"
-                  step="0.0001"
-                  required
-                />
-                <small>Close cycle at this profit (e.g., 0.08 = 8%)</small>
-              </div>
-
-              <div className="form-group">
                 <label htmlFor="positionOpenInterval">Position Open Interval (min)</label>
                 <input
                   type="number"
@@ -540,6 +575,89 @@ const StrategyForm = ({ strategy, onSuccess, onCancel }) => {
                 />
                 <small>Candles before balancing activates</small>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Strategy Parameters - PERIODIC_DUAL */}
+        {formData.strategyType === 'PERIODIC_DUAL' && (
+          <div className="form-section">
+            <h3>Periodic Dual Parameters</h3>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="periodicInterval">Position Open Interval (minutes) *</label>
+                <input
+                  type="number"
+                  id="periodicInterval"
+                  name="periodicInterval"
+                  value={formData.periodicInterval}
+                  onChange={handleChange}
+                  min="1"
+                  required
+                />
+                <small>Open LONG+SHORT pair every N minutes (e.g., 1 = every minute)</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="periodicTimeWindow">Time Window (minutes) *</label>
+                <input
+                  type="number"
+                  id="periodicTimeWindow"
+                  name="periodicTimeWindow"
+                  value={formData.periodicTimeWindow}
+                  onChange={handleChange}
+                  min="1"
+                  required
+                />
+                <small>Max hold time per position (e.g., 30 = close after 30 min if no profit/stoploss)</small>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="periodicStoplossPercent">Stop-Loss (%) *</label>
+                <input
+                  type="number"
+                  id="periodicStoplossPercent"
+                  name="periodicStoplossPercent"
+                  value={formData.periodicStoplossPercent}
+                  onChange={handleChange}
+                  max="0"
+                  step="0.01"
+                  required
+                />
+                <small>Stop-loss as % of collateral (e.g., -40.00 = close if loss reaches 40%)</small>
+              </div>
+
+              <div className="form-group">
+                <label>Max Concurrent Positions</label>
+                <input
+                  type="text"
+                  value={formData.periodicTimeWindow && formData.periodicInterval
+                    ? `${Math.ceil(parseInt(formData.periodicTimeWindow) / parseInt(formData.periodicInterval)) * 2} (${Math.ceil(parseInt(formData.periodicTimeWindow) / parseInt(formData.periodicInterval))} LONG + ${Math.ceil(parseInt(formData.periodicTimeWindow) / parseInt(formData.periodicInterval))} SHORT)`
+                    : 'N/A'}
+                  disabled
+                  style={{ background: '#f5f5f5', color: '#666' }}
+                />
+                <small>Auto-calculated: ceil(timeWindow / interval) × 2</small>
+              </div>
+            </div>
+
+            <div className="strategy-summary" style={{
+              background: '#f0f7ff',
+              border: '1px solid #b3d9ff',
+              borderRadius: '4px',
+              padding: '12px',
+              marginTop: '12px'
+            }}>
+              <strong>Strategy Summary:</strong>
+              <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', fontSize: '0.9rem' }}>
+                <li>Opens LONG + SHORT every {formData.periodicInterval} minute(s)</li>
+                <li>Holds positions for up to {formData.periodicTimeWindow} minutes</li>
+                <li>Closes on: {formData.profitThreshold}% profit, {formData.periodicStoplossPercent}% loss, or timeout</li>
+                <li>Uses {formData.leverage}x leverage with dynamic capital allocation</li>
+              </ul>
             </div>
           </div>
         )}

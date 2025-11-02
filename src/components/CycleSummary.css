@@ -68,10 +68,31 @@
   color: #666;
 }
 
+.cycle-summary-section {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.cycle-summary-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.cycle-summary-section h4 {
+  margin: 0 0 6px 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
 .cycle-summary-row {
   display: flex;
   gap: 6px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
   flex-wrap: wrap;
 }
 
