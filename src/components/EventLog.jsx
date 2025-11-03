@@ -1,33 +1,69 @@
 import React, { useState, useEffect, useRef, memo } from 'react'
 import './EventLog.css'
 
-// GLOBAL event store - survives component remounts
+// GLOBAL event store - survives component remounts AND HMR
+// Use window to persist across hot reloads
+if (!window.__EVENT_STORE__) {
+  window.__EVENT_STORE__ = {
+    events: [],
+    listeners: new Set(),
+    initialized: false
+  }
+}
+
 const EventStore = {
-  events: [],
-  listeners: new Set(),
+  get events() {
+    return window.__EVENT_STORE__.events
+  },
+  set events(value) {
+    window.__EVENT_STORE__.events = value
+  },
+  get listeners() {
+    return window.__EVENT_STORE__.listeners
+  },
+  get initialized() {
+    return window.__EVENT_STORE__.initialized
+  },
+  set initialized(value) {
+    window.__EVENT_STORE__.initialized = value
+  },
 
   init() {
-    if (this.events.length === 0) {
-      try {
-        const saved = localStorage.getItem('eventLog_events')
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          this.events = parsed.map(e => ({ ...e, time: new Date(e.time) }))
-          console.log('📦 Loaded', this.events.length, 'events from localStorage')
-        }
-      } catch (err) {
-        console.error('Failed to load events from localStorage:', err)
-      }
+    if (this.initialized) {
+      console.log('📦 EventStore already initialized with', this.events.length, 'events')
+      return
     }
+
+    try {
+      const saved = localStorage.getItem('eventLog_events')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        this.events = parsed.map(e => ({ ...e, time: new Date(e.time) }))
+        console.log('📦 Loaded', this.events.length, 'events from localStorage')
+      } else {
+        console.log('📦 No saved events in localStorage')
+      }
+    } catch (err) {
+      console.error('Failed to load events from localStorage:', err)
+      this.events = []
+    }
+
+    this.initialized = true
   },
 
   addEvent(event) {
-    this.events = [event, ...this.events].slice(0, 500)
+    const oldLength = this.events.length
+    this.events = [event, ...this.events].slice(0, 5000) // Increased from 500 to 5000
+    const newLength = this.events.length
 
-    // Save to localStorage every 10 events
-    if (this.events.length % 10 === 0) {
+    // Save to localStorage every 100 events (changed from 10 to reduce I/O)
+    if (this.events.length % 100 === 0) {
       try {
         localStorage.setItem('eventLog_events', JSON.stringify(this.events))
+        // Only log if EventLog is visible
+        if (window.__EVENT_LOG_VISIBLE__) {
+          console.log('💾 Saved', this.events.length, 'events to localStorage')
+        }
       } catch (err) {
         console.error('Failed to save events to localStorage:', err)
       }
@@ -37,6 +73,8 @@ const EventStore = {
   },
 
   clearEvents() {
+    console.log('🗑️ CLEARING EventStore:', this.events.length, 'events')
+    console.trace('Clear called from:')
     this.events = []
     try {
       localStorage.removeItem('eventLog_events')
@@ -51,11 +89,29 @@ const EventStore = {
   },
 
   subscribe(listener) {
+    if (window.__EVENT_LOG_VISIBLE__) {
+      console.log('➕ Adding listener. Total listeners:', this.listeners.size + 1)
+    }
     this.listeners.add(listener)
-    return () => this.listeners.delete(listener)
+    // Immediately send current events to new subscriber
+    listener(this.events)
+    return () => {
+      if (window.__EVENT_LOG_VISIBLE__) {
+        console.log('➖ Removing listener. Total listeners:', this.listeners.size - 1)
+      }
+      this.listeners.delete(listener)
+    }
   },
 
   notifyListeners() {
+    // Only log if EventLog is visible
+    if (window.__EVENT_LOG_VISIBLE__) {
+      console.log('📢 Notifying', this.listeners.size, 'listeners with', this.events.length, 'events')
+      if (this.events.length === 0 && this.initialized) {
+        console.warn('⚠️ WARNING: Notifying with 0 events but EventStore was initialized!')
+        console.trace('Notify with 0 events called from:')
+      }
+    }
     this.listeners.forEach(listener => listener(this.events))
   }
 }
@@ -64,7 +120,13 @@ const EventStore = {
 EventStore.init()
 
 const EventLog = memo(({ isVisible = true }) => {
-  const [events, setEvents] = useState(() => EventStore.getEvents())
+  const [events, setEvents] = useState(() => {
+    // Force EventStore to initialize before getting events
+    EventStore.init()
+    const initialEvents = EventStore.getEvents()
+    console.log('🎬 EventLog initial state:', initialEvents.length, 'events')
+    return initialEvents
+  })
 
   const [filters, setFilters] = useState({
     priceTicks: true,
@@ -82,19 +144,42 @@ const EventLog = memo(({ isVisible = true }) => {
   const eventListRef = useRef(null)
   const isPausedRef = useRef(isPaused) // Use ref to avoid stale closure
   const [autoScroll, setAutoScroll] = useState(true)
-  const [eventStats, setEventStats] = useState({
-    ticks: 0,
-    candles: 0,
-    indicators: 0,
-    total: 0
-  })
+
+  // Calculate stats from actual events
+  const eventStats = React.useMemo(() => {
+    const stats = {
+      ticks: 0,
+      candles: 0,
+      indicators: 0,
+      total: events.length
+    }
+
+    events.forEach(event => {
+      if (event.type === 'PRICE_TICK') stats.ticks++
+      else if (event.type === 'CANDLE_COMPLETED') stats.candles++
+      else if (event.type === 'INDICATOR_CALCULATED') stats.indicators++
+    })
+
+    return stats
+  }, [events])
 
   // Subscribe to EventStore changes
   useEffect(() => {
+    if (window.__EVENT_LOG_VISIBLE__) {
+      console.log('🔔 Subscribing to EventStore changes')
+    }
     const unsubscribe = EventStore.subscribe((newEvents) => {
+      if (window.__EVENT_LOG_VISIBLE__) {
+        console.log('📨 EventStore update received:', newEvents.length, 'events')
+      }
       setEvents(newEvents)
     })
-    return unsubscribe
+    return () => {
+      if (window.__EVENT_LOG_VISIBLE__) {
+        console.log('🔕 Unsubscribing from EventStore')
+      }
+      unsubscribe()
+    }
   }, [])
 
   // Update ref when isPaused changes
@@ -102,15 +187,27 @@ const EventLog = memo(({ isVisible = true }) => {
     isPausedRef.current = isPaused
   }, [isPaused])
 
+  // Only connect when visible
   useEffect(() => {
-    console.log('📊 EventLog component mounted. Events in store:', EventStore.getEvents().length)
-    connectToEventStream()
+    // Set global visibility flag for logging
+    window.__EVENT_LOG_VISIBLE__ = isVisible
 
-    return () => {
-      console.log('📊 EventLog component unmounting. Events in store:', EventStore.getEvents().length)
+    if (isVisible) {
+      console.log('📊 EventLog visible - connecting to stream. Events in store:', EventStore.getEvents().length)
+      connectToEventStream()
+    } else {
+      console.log('📊 EventLog hidden - disconnecting from stream')
       disconnectFromEventStream()
     }
-  }, [])
+
+    return () => {
+      if (isVisible) {
+        console.log('📊 EventLog unmounting - disconnecting from stream')
+        disconnectFromEventStream()
+        window.__EVENT_LOG_VISIBLE__ = false
+      }
+    }
+  }, [isVisible])
 
   const connectToEventStream = () => {
     if (eventSourceRef.current) {
@@ -143,7 +240,6 @@ const EventLog = memo(({ isVisible = true }) => {
         message: `${data.mint.slice(0, 8)}... $${parseFloat(data.price).toFixed(4)}`,
         data
       })
-      setEventStats(prev => ({ ...prev, ticks: prev.ticks + 1, total: prev.total + 1 }))
     })
 
     eventSource.addEventListener('candle', (e) => {
@@ -156,7 +252,6 @@ const EventLog = memo(({ isVisible = true }) => {
         message: `${candle.interval} O:${parseFloat(candle.open).toFixed(2)} H:${parseFloat(candle.high).toFixed(2)} L:${parseFloat(candle.low).toFixed(2)} C:${parseFloat(candle.close).toFixed(2)}`,
         data
       })
-      setEventStats(prev => ({ ...prev, candles: prev.candles + 1, total: prev.total + 1 }))
     })
 
     eventSource.addEventListener('indicator', (e) => {
@@ -175,7 +270,6 @@ const EventLog = memo(({ isVisible = true }) => {
         message: `${intervalStr}${data.indicatorKey} = ${valueStr}${changeStr}`,
         data
       })
-      setEventStats(prev => ({ ...prev, indicators: prev.indicators + 1, total: prev.total + 1 }))
     })
 
     eventSource.onerror = (error) => {
@@ -221,37 +315,56 @@ const EventLog = memo(({ isVisible = true }) => {
     }
   }
 
-  const filteredEvents = events.filter(event => {
-    // Always show system events
-    if (event.type === 'SYSTEM') return true
+  const filteredEvents = React.useMemo(() => {
+    const filtered = events.filter(event => {
+      // Always show system events
+      if (event.type === 'SYSTEM') return true
 
-    if (event.type === 'PRICE_TICK' && !filters.priceTicks) return false
-    if (event.type === 'CANDLE_COMPLETED' && !filters.candles) return false
-    if (event.type === 'INDICATOR_CALCULATED' && !filters.indicators) return false
+      if (event.type === 'PRICE_TICK' && !filters.priceTicks) return false
+      if (event.type === 'CANDLE_COMPLETED' && !filters.candles) return false
+      if (event.type === 'INDICATOR_CALCULATED' && !filters.indicators) return false
 
-    // Interval filters (for candles and indicators)
-    if (event.type === 'CANDLE_COMPLETED' || event.type === 'INDICATOR_CALCULATED') {
-      const interval = event.data?.interval || ''
-      if (interval === '1min' && !filters.interval1min) return false
-      if (interval === '15sec' && !filters.interval15sec) return false
+      // Interval filters (for candles and indicators)
+      if (event.type === 'CANDLE_COMPLETED' || event.type === 'INDICATOR_CALCULATED') {
+        const interval = event.data?.interval || ''
+        if (interval === '1min' && !filters.interval1min) return false
+        if (interval === '15sec' && !filters.interval15sec) return false
+      }
+
+      // Indicator-specific filters (only apply if at least one is enabled)
+      if (event.type === 'INDICATOR_CALCULATED') {
+        const indicatorKey = event.data?.indicatorKey || ''
+        const hasSpecificFilter = filters.maOnly || filters.maDerivationOnly || filters.rsiOnly
+
+        if (hasSpecificFilter) {
+          // If specific filters are enabled, check them
+          // Check MA_DERIVATION first (more specific), then MA (to avoid matching MA_DERIVATION)
+          if (filters.maDerivationOnly && !indicatorKey.startsWith('MA_DERIVATION_')) return false
+          if (filters.maOnly && (!indicatorKey.startsWith('MA_') || indicatorKey.startsWith('MA_DERIVATION_'))) return false
+          if (filters.rsiOnly && !indicatorKey.startsWith('RSI_')) return false
+        }
+        // If no specific filter is enabled, show all indicators (when indicators checkbox is checked)
+      }
+
+      return true
+    })
+
+    // Only log when EventLog is visible
+    if (window.__EVENT_LOG_VISIBLE__) {
+      console.log('🔍 Filtered events:', filtered.length, '/', events.length, 'total')
+      if (filtered.length === 0 && events.length > 0) {
+        console.log('🔍 Current filters:', JSON.stringify(filters))
+        console.warn('⚠️ ALL EVENTS FILTERED OUT! Sample event:', events[0])
+        console.warn('⚠️ Event types in store:', [...new Set(events.map(e => e.type))])
+      }
     }
-
-    // Indicator-specific filters
-    if (event.type === 'INDICATOR_CALCULATED') {
-      const indicatorKey = event.data?.indicatorKey || ''
-      // Check MA_DERIVATION first (more specific), then MA (to avoid matching MA_DERIVATION)
-      if (filters.maDerivationOnly && !indicatorKey.startsWith('MA_DERIVATION_')) return false
-      if (filters.maOnly && (!indicatorKey.startsWith('MA_') || indicatorKey.startsWith('MA_DERIVATION_'))) return false
-      if (filters.rsiOnly && !indicatorKey.startsWith('RSI_')) return false
-    }
-
-    return true
-  })
+    return filtered
+  }, [events, filters])
 
   const clearEvents = () => {
     console.log('🗑️ Clearing all events (intentional)')
     EventStore.clearEvents()
-    setEventStats({ ticks: 0, candles: 0, indicators: 0, total: 0 })
+    // Stats will be recalculated automatically from the empty events array
   }
 
   const togglePause = () => {
@@ -388,13 +501,17 @@ const EventLog = memo(({ isVisible = true }) => {
       <div className="event-stats-bar">
         <span>Total Events: {eventStats.total}</span>
         <span>Showing: {filteredEvents.length} / {events.length}</span>
-        <span>Buffer: {events.length} / 500</span>
+        <span>Buffer: {events.length} / 5000</span>
       </div>
 
       <div className="event-list" ref={eventListRef}>
         {filteredEvents.length === 0 ? (
           <div className="event-empty">
-            {isPaused ? 'Events paused. Click Resume to continue.' : 'Waiting for events...'}
+            {isPaused
+              ? 'Events paused. Click Resume to continue.'
+              : events.length > 0
+                ? `All ${events.length} events are filtered out. Adjust filters above to see events.`
+                : 'Waiting for events...'}
           </div>
         ) : (
           filteredEvents.map((event, index) => (

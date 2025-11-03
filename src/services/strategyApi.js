@@ -225,7 +225,7 @@ export const fetchLiquidationCurve = async () => {
  */
 export const fetchDetailedLiquidationCurve = async (points = 100) => {
   try {
-    const response = await axios.get(`/api/liquidation/curve/detailed?points=${points}`)
+    const response = await axios.get(`/api/jupiter/perps/v1/liquidation/curve/detailed?points=${points}`)
     return response.data
   } catch (error) {
     console.error('Error fetching detailed liquidation curve:', error)

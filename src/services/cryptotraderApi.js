@@ -198,19 +198,18 @@ export const fetch15SecCandles = async (mint = SOL_MINT, limit = 240) => {
 
     // Transform 15-sec candle data to our format
     // Sort by timestamp ascending (oldest first)
-    const sortedData = response.data.sort((a, b) =>
-      new Date(a.time).getTime() - new Date(b.time).getTime()
-    )
+    const sortedData = response.data.sort((a, b) => a.timestamp - b.timestamp)
 
     return sortedData.map(candle => ({
-      time: new Date(candle.time).getTime() / 1000, // Convert to seconds
+      time: candle.timestamp,
       open: candle.open,
       high: candle.high,
       low: candle.low,
       close: candle.close,
       numberOfTicks: candle.numberOfTicks,
       complete: candle.complete,
-      timeIso: candle.timeIso
+      movingAverages: candle.movingAverages || {},
+      direction: candle.direction
     }))
   } catch (error) {
     console.error('Error fetching 15-second candles:', error)
@@ -259,19 +258,18 @@ export const fetch15SecCandlesRange = async (mint = SOL_MINT, startTime, endTime
       params: { startTime, endTime, interval: '15sec' }
     })
 
-    const sortedData = response.data.sort((a, b) =>
-      new Date(a.time).getTime() - new Date(b.time).getTime()
-    )
+    const sortedData = response.data.sort((a, b) => a.timestamp - b.timestamp)
 
     return sortedData.map(candle => ({
-      time: new Date(candle.time).getTime() / 1000,
+      time: candle.timestamp,
       open: candle.open,
       high: candle.high,
       low: candle.low,
       close: candle.close,
       numberOfTicks: candle.numberOfTicks,
       complete: candle.complete,
-      timeIso: candle.timeIso
+      movingAverages: candle.movingAverages || {},
+      direction: candle.direction
     }))
   } catch (error) {
     console.error('Error fetching 15-second candles range:', error)

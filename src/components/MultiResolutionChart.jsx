@@ -151,7 +151,14 @@ const MultiResolutionChart = ({
           { label: '15min', value: 300 },
           { label: '30min', value: 600 },
           { label: '1h', value: 1200 },
-          { label: '2h', value: 2400 }
+          { label: '2h', value: 2400 },
+          { label: '4h', value: 4800 },
+          { label: '8h', value: 9600 },
+          { label: '12h', value: 14400 },
+          { label: '1d', value: 28800 },
+          { label: '2d', value: 57600 },
+          { label: '3d', value: 86400 },
+          { label: '1w', value: 201600 }
         ]
       case '15sec':
         return [
@@ -160,7 +167,12 @@ const MultiResolutionChart = ({
           { label: '1h', value: 240 },
           { label: '2h', value: 480 },
           { label: '4h', value: 960 },
-          { label: '8h', value: 1920 }
+          { label: '8h', value: 1920 },
+          { label: '12h', value: 2880 },
+          { label: '1d', value: 5760 },
+          { label: '2d', value: 11520 },
+          { label: '3d', value: 17280 },
+          { label: '1w', value: 40320 }
         ]
       case '1min':
       default:
@@ -173,14 +185,16 @@ const MultiResolutionChart = ({
           { label: '1d', value: 1440 },
           { label: '2d', value: 2880 },
           { label: '3d', value: 4320 },
-          { label: '1w', value: 10080 }
+          { label: '1w', value: 10080 },
+          { label: '2w', value: 20160 },
+          { label: '1mo', value: 43200 }
         ]
     }
   }
 
   const handleLimitChange = (e) => {
     const value = parseInt(e.target.value)
-    if (!isNaN(value) && value > 0 && value <= 10000) {
+    if (!isNaN(value) && value > 0 && value <= 500000) {
       setCandleLimit(value)
     }
   }
@@ -238,17 +252,42 @@ const MultiResolutionChart = ({
         } else if (resolution === '15sec') {
           // Fetch 15-second candles
           data = await fetch15SecCandles(mint, candleLimit)
-          
-          const dataWithMs = data.map(candle => ({
-            time: candle.time * 1000,
-            open: candle.open,
-            high: candle.high,
-            low: candle.low,
-            close: candle.close,
-            numberOfTicks: candle.numberOfTicks,
-            complete: candle.complete,
-            type: 'candle'
-          }))
+
+          const dataWithMs = data.map((candle, index) => {
+            // Calculate MA derivations (compare with previous candle)
+            const maDerivations = {}
+            const maDerivationPercents = {}
+            if (index > 0 && candle.movingAverages) {
+              const prevCandle = data[index - 1]
+              if (prevCandle && prevCandle.movingAverages) {
+                Object.keys(candle.movingAverages).forEach(period => {
+                  const currentMA = parseFloat(candle.movingAverages[period])
+                  const prevMA = parseFloat(prevCandle.movingAverages[period])
+                  if (!isNaN(currentMA) && !isNaN(prevMA) && prevMA !== 0) {
+                    const derivation = currentMA - prevMA
+                    const derivationPercent = (derivation / prevMA) * 100
+                    maDerivations[period] = derivation
+                    maDerivationPercents[period] = derivationPercent
+                  }
+                })
+              }
+            }
+
+            return {
+              time: candle.time * 1000,
+              open: candle.open,
+              high: candle.high,
+              low: candle.low,
+              close: candle.close,
+              numberOfTicks: candle.numberOfTicks,
+              complete: candle.complete,
+              movingAverages: candle.movingAverages || {},
+              maDerivations,
+              maDerivationPercents,
+              direction: candle.direction,
+              type: 'candle'
+            }
+          })
           setChartData(dataWithMs)
 
           // Calculate stats from latest candle
@@ -807,7 +846,7 @@ const MultiResolutionChart = ({
 
         {/* Limit Controls */}
         <div className="limit-controls">
-          <label>Data Points:</label>
+          <label>Time Range:</label>
           <select
             value={candleLimit}
             onChange={(e) => setCandleLimit(Number(e.target.value))}
@@ -818,30 +857,19 @@ const MultiResolutionChart = ({
                 {preset.label}
               </option>
             ))}
+            <option value="custom">Custom</option>
           </select>
+          <input
+            type="number"
+            value={candleLimit}
+            onChange={handleLimitChange}
+            min="1"
+            max="500000"
+            className="limit-input"
+            placeholder="Custom limit"
+            title="Enter custom data point limit (1-500000)"
+          />
         </div>
-
-        {/* MA Selector - Only show for 1-min candles */}
-        {resolution === '1min' && (
-          <div className="ma-selector">
-            <label>Add MA:</label>
-            <select
-              value=""
-              onChange={(e) => {
-                if (e.target.value) {
-                  handleAddMA(Number(e.target.value))
-                  e.target.value = ''
-                }
-              }}
-              className="ma-dropdown"
-            >
-              <option value="">Select MA</option>
-              {getAvailableMAPeriods().map(period => (
-                <option key={period} value={period}>MA{period}</option>
-              ))}
-            </select>
-          </div>
-        )}
 
         {/* MA Chips - Only show for 1-min candles */}
         {resolution === '1min' && selectedMAs && selectedMAs.length > 0 && (
@@ -866,28 +894,6 @@ const MultiResolutionChart = ({
                 </div>
               )
             })}
-          </div>
-        )}
-
-        {/* MA Derivation Selector - Only show for 1-min candles */}
-        {resolution === '1min' && (
-          <div className="ma-deriv-selector">
-            <label>Add MA Δ:</label>
-            <select
-              value=""
-              onChange={(e) => {
-                if (e.target.value) {
-                  handleAddMADerivation(Number(e.target.value))
-                  e.target.value = ''
-                }
-              }}
-              className="ma-deriv-dropdown"
-            >
-              <option value="">Select MA Δ</option>
-              {getAvailableMADerivationPeriods().map(period => (
-                <option key={period} value={period}>MA{period} Δ</option>
-              ))}
-            </select>
           </div>
         )}
 
@@ -925,21 +931,6 @@ const MultiResolutionChart = ({
             title={showCandles ? 'Hide candles' : 'Show candles'}
           >
             {showCandles ? 'Hide Candles' : 'Show Candles'}
-          </button>
-        </div>
-
-        {/* Position Toggle */}
-        <div className="position-toggle">
-          <button
-            className={showPositions ? 'active' : ''}
-            onClick={() => {
-              console.log('Toggle button clicked. Current showPositions:', showPositions)
-              setShowPositions(!showPositions)
-              console.log('New showPositions will be:', !showPositions)
-            }}
-            title={showPositions ? 'Hide positions' : 'Show positions'}
-          >
-            {showPositions ? 'Hide Positions' : 'Show Positions'}
           </button>
         </div>
 

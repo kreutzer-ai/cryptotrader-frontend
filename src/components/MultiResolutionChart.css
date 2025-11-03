@@ -88,6 +88,30 @@
   border-color: #2196f3;
 }
 
+.limit-input {
+  padding: 4px 8px;
+  background: white;
+  color: #333;
+  border: 1px solid #ccc;
+  font-size: 12px;
+  width: 80px;
+  text-align: right;
+}
+
+.limit-input:hover {
+  border-color: #999;
+}
+
+.limit-input:focus {
+  outline: none;
+  border-color: #2196f3;
+}
+
+.limit-input::-webkit-inner-spin-button,
+.limit-input::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
 .ma-selector {
   display: flex;
   align-items: center;

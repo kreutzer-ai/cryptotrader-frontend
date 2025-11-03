@@ -3,9 +3,7 @@ import CandlestickChart from './components/CandlestickChart'
 import RechartsCandles from './components/RechartsCandles'
 import MultiResolutionChart from './components/MultiResolutionChart'
 import CyclesPanel from './components/CyclesPanel'
-import StrategyManager from './components/StrategyManager'
 import WalletManager from './components/WalletManager'
-import CycleMonitor from './components/CycleMonitor'
 import UserManager from './components/UserManager'
 import LiquidationCurveOverlay from './components/LiquidationCurveOverlay'
 import EventLog from './components/EventLog'
@@ -57,8 +55,8 @@ function App() {
       }
     }
 
-    // Default MAs
-    return [5, 25]
+    // Default: no MAs
+    return []
   }
 
   const getInitialLimit = () => {
@@ -180,22 +178,10 @@ function App() {
               Chart
             </button>
             <button
-              className={`tab-btn ${activeTab === 'strategies' ? 'active' : ''}`}
-              onClick={() => setActiveTab('strategies')}
-            >
-              Strategies
-            </button>
-            <button
               className={`tab-btn ${activeTab === 'wallets' ? 'active' : ''}`}
               onClick={() => setActiveTab('wallets')}
             >
               Wallets
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'monitor' ? 'active' : ''}`}
-              onClick={() => setActiveTab('monitor')}
-            >
-              Cycle Monitor
             </button>
             <button
               className={`tab-btn ${activeTab === 'events' ? 'active' : ''}`}
@@ -285,16 +271,8 @@ function App() {
               />
             )}
           </>
-        ) : activeTab === 'strategies' ? (
-          <StrategyManager
-            strategies={strategies}
-            onStrategyChange={handleStrategyChange}
-            onRefresh={loadStrategies}
-          />
         ) : activeTab === 'wallets' ? (
           <WalletManager />
-        ) : activeTab === 'monitor' ? (
-          <CycleMonitor />
         ) : activeTab === 'users' ? (
           <UserManager />
         ) : null}

@@ -9,7 +9,8 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
   const [selectedLeverage, setSelectedLeverage] = useState(currentLeverage || 5)
   const [calculatedData, setCalculatedData] = useState(null)
   const [entryPrice, setEntryPrice] = useState('')
-  const [liquidationPrices, setLiquidationPrices] = useState(null)
+  const [longLiquidationData, setLongLiquidationData] = useState(null)
+  const [shortLiquidationData, setShortLiquidationData] = useState(null)
 
   // Load curve data on mount
   useEffect(() => {
@@ -23,14 +24,15 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
     }
   }, [selectedLeverage])
 
-  // Calculate liquidation prices when entry price or calculated data changes
+  // Calculate liquidation prices when entry price or leverage changes
   useEffect(() => {
-    if (entryPrice && calculatedData) {
+    if (entryPrice && selectedLeverage) {
       calculateLiquidationPrices()
     } else {
-      setLiquidationPrices(null)
+      setLongLiquidationData(null)
+      setShortLiquidationData(null)
     }
-  }, [entryPrice, calculatedData])
+  }, [entryPrice, selectedLeverage])
 
   const loadCurveData = async () => {
     try {
@@ -53,29 +55,27 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
     }
   }
 
-  const calculateLiquidationPrices = () => {
+  const calculateLiquidationPrices = async () => {
     const price = parseFloat(entryPrice)
-    if (isNaN(price) || price <= 0 || !calculatedData) {
-      setLiquidationPrices(null)
+    if (isNaN(price) || price <= 0 || !selectedLeverage) {
+      setLongLiquidationData(null)
+      setShortLiquidationData(null)
       return
     }
 
-    const liquidationLimitDecimal = parseFloat(calculatedData.liquidationLimit)
+    try {
+      // Calculate for LONG position
+      const longResult = await calculateLiquidationLimit(selectedLeverage, price, 'LONG')
+      setLongLiquidationData(longResult)
 
-    // For LONG: liquidation happens when price drops by liquidationLimit%
-    // Liquidation price = entry price * (1 - liquidationLimit)
-    const longLiquidationPrice = price * (1 - liquidationLimitDecimal)
-
-    // For SHORT: liquidation happens when price rises by liquidationLimit%
-    // Liquidation price = entry price * (1 + liquidationLimit)
-    const shortLiquidationPrice = price * (1 + liquidationLimitDecimal)
-
-    setLiquidationPrices({
-      long: longLiquidationPrice.toFixed(4),
-      short: shortLiquidationPrice.toFixed(4),
-      longDrop: (liquidationLimitDecimal * 100).toFixed(2),
-      shortRise: (liquidationLimitDecimal * 100).toFixed(2)
-    })
+      // Calculate for SHORT position
+      const shortResult = await calculateLiquidationLimit(selectedLeverage, price, 'SHORT')
+      setShortLiquidationData(shortResult)
+    } catch (error) {
+      console.error('Failed to calculate liquidation prices:', error)
+      setLongLiquidationData(null)
+      setShortLiquidationData(null)
+    }
   }
 
   const getChartOption = () => {
@@ -275,7 +275,7 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
                   />
                 </div>
 
-                {liquidationPrices && (
+                {longLiquidationData && shortLiquidationData && (
                   <div className="calculator-results">
                     <div className="liquidation-prices-grid">
                       <div className="liquidation-price-card long">
@@ -283,13 +283,13 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
                         <div className="card-body">
                           <div className="price-display">
                             <span className="price-label">Liquidation Price:</span>
-                            <span className="price-value">${liquidationPrices.long}</span>
+                            <span className="price-value">${parseFloat(longLiquidationData.liquidationPrice).toFixed(4)}</span>
                           </div>
                           <div className="price-info">
-                            Price drops by {liquidationPrices.longDrop}%
+                            Price drops by {longLiquidationData.liquidationLimitPercent}
                           </div>
                           <div className="price-calculation">
-                            ${entryPrice} → ${liquidationPrices.long}
+                            ${entryPrice} → ${parseFloat(longLiquidationData.liquidationPrice).toFixed(4)}
                           </div>
                         </div>
                       </div>
@@ -298,13 +298,13 @@ const LiquidationCurveOverlay = ({ onClose, currentLeverage = null }) => {
                         <div className="card-body">
                           <div className="price-display">
                             <span className="price-label">Liquidation Price:</span>
-                            <span className="price-value">${liquidationPrices.short}</span>
+                            <span className="price-value">${parseFloat(shortLiquidationData.liquidationPrice).toFixed(4)}</span>
                           </div>
                           <div className="price-info">
-                            Price rises by {liquidationPrices.shortRise}%
+                            Price rises by {shortLiquidationData.liquidationLimitPercent}
                           </div>
                           <div className="price-calculation">
-                            ${entryPrice} → ${liquidationPrices.short}
+                            ${entryPrice} → ${parseFloat(shortLiquidationData.liquidationPrice).toFixed(4)}
                           </div>
                         </div>
                       </div>
