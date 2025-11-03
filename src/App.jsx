@@ -8,6 +8,7 @@ import WalletManager from './components/WalletManager'
 import CycleMonitor from './components/CycleMonitor'
 import UserManager from './components/UserManager'
 import LiquidationCurveOverlay from './components/LiquidationCurveOverlay'
+import EventLog from './components/EventLog'
 import Login from './components/Login'
 import { fetchStrategies } from './services/cryptotraderApi'
 import { isAuthenticated, logout, getCurrentUser } from './services/authService'
@@ -139,35 +140,8 @@ function App() {
     }
   }
 
-  // Update URL when selectedMAs, candleLimit, or selectedStrategy changes
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-
-    if (selectedMAs.length > 0) {
-      params.set('mas', selectedMAs.join(','))
-    } else {
-      params.delete('mas')
-    }
-
-    if (candleLimit !== 300) {
-      params.set('limit', candleLimit.toString())
-    } else {
-      params.delete('limit')
-    }
-
-    if (selectedStrategy && selectedStrategy.strategyName) {
-      console.log('App.jsx - Updating URL with strategy:', selectedStrategy.strategyName)
-      params.set('strategy', selectedStrategy.strategyName)
-    } else {
-      console.log('App.jsx - Removing strategy from URL')
-      params.delete('strategy')
-    }
-
-    // Update URL without reloading the page
-    const newUrl = `${window.location.pathname}?${params.toString()}`
-    console.log('App.jsx - New URL:', newUrl)
-    window.history.replaceState({}, '', newUrl)
-  }, [selectedMAs, candleLimit, selectedStrategy])
+  // URL parameter persistence disabled to prevent redirect loops
+  // TODO: Re-enable URL persistence once the root cause is identified
 
   // Handle logout
   const handleLogout = async () => {
@@ -182,8 +156,7 @@ function App() {
   // Handle successful login
   const handleLoginSuccess = () => {
     setIsLoggedIn(true)
-    // Clear URL params after login to avoid redirect loops
-    window.history.replaceState({}, '', '/')
+    // Don't clear URL params - let user preferences persist
   }
 
   // Show login screen if not authenticated
@@ -223,6 +196,12 @@ function App() {
               onClick={() => setActiveTab('monitor')}
             >
               Cycle Monitor
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'events' ? 'active' : ''}`}
+              onClick={() => setActiveTab('events')}
+            >
+              Event Log
             </button>
             {isAdmin && (
               <button
@@ -319,6 +298,9 @@ function App() {
         ) : activeTab === 'users' ? (
           <UserManager />
         ) : null}
+
+        {/* EventLog always mounted, just hidden */}
+        <EventLog isVisible={activeTab === 'events'} />
       </div>
 
       {/* Liquidation Curve Overlay */}

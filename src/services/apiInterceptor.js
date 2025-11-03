@@ -62,9 +62,15 @@ export const setupApiInterceptor = (axiosInstance) => {
           // Retry original request
           return axiosInstance(originalRequest)
         } catch (err) {
-          // Refresh failed, redirect to login
+          // Refresh failed
           processQueue(err, null)
-          authService.logout()
+
+          // Only logout in production mode (to avoid redirect loops in dev)
+          const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+          if (!isDev) {
+            authService.logout()
+          }
+
           return Promise.reject(err)
         }
       }
@@ -76,27 +82,26 @@ export const setupApiInterceptor = (axiosInstance) => {
   // Request interceptor to add token to all requests
   axiosInstance.interceptors.request.use(
     config => {
-      // Check if token is about to expire
-      if (authService.isTokenExpired()) {
-        // Try to refresh before making request
-        return authService.refreshToken()
-          .then(response => {
-            config.headers['Authorization'] = `Bearer ${response.accessToken}`
-            return config
-          })
-          .catch(() => {
-            // Refresh failed, proceed with current token (will fail with 401)
-            const token = authService.getAccessToken()
-            if (token) {
-              config.headers['Authorization'] = `Bearer ${token}`
-            }
-            return config
-          })
-      }
-
-      // Add current token to request
       const token = authService.getAccessToken()
+
+      // Only handle token refresh if we have a token
       if (token) {
+        // Check if token is about to expire
+        if (authService.isTokenExpired()) {
+          // Try to refresh before making request
+          return authService.refreshToken()
+            .then(response => {
+              config.headers['Authorization'] = `Bearer ${response.accessToken}`
+              return config
+            })
+            .catch(() => {
+              // Refresh failed, proceed with current token (will fail with 401)
+              config.headers['Authorization'] = `Bearer ${token}`
+              return config
+            })
+        }
+
+        // Add current token to request
         config.headers['Authorization'] = `Bearer ${token}`
       }
 

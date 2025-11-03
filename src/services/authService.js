@@ -141,16 +141,21 @@ export const getCurrentUser = () => {
  * Logout and clear tokens
  */
 export const logout = async () => {
+  // In development mode, don't redirect - just clear tokens
+  const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+
   try {
-    // Call logout endpoint to blacklist tokens
-    await fetch(`${API_BASE_URL}/api/auth/logout`, {
-      method: 'POST',
-      headers: {
-        ...getAuthHeader(),
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    })
+    // Call logout endpoint to blacklist tokens (only if we have a token)
+    if (sessionStorage.getItem('accessToken')) {
+      await fetch(`${API_BASE_URL}/api/auth/logout`, {
+        method: 'POST',
+        headers: {
+          ...getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
+    }
   } catch (error) {
     console.error('Logout error:', error)
   } finally {
@@ -158,8 +163,11 @@ export const logout = async () => {
     sessionStorage.removeItem('accessToken')
     sessionStorage.removeItem('username')
     sessionStorage.removeItem('tokenExpiry')
-    // Redirect to root (/) without query params to avoid redirect loop
-    window.location.href = '/'
+
+    // Only redirect in production mode
+    if (!isDev) {
+      window.location.href = '/'
+    }
   }
 }
 

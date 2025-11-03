@@ -12,11 +12,14 @@ const SOL_MINT = 'So11111111111111111111111111111111111111112'
 // Setup JWT token refresh interceptor
 setupApiInterceptor(axios)
 
-// Configure axios to include auth headers
+// Configure axios to include auth headers (only if token exists)
 axios.interceptors.request.use(
   (config) => {
     const authHeaders = getAuthHeader()
-    config.headers = { ...config.headers, ...authHeaders }
+    // Only add auth headers if we have a token
+    if (Object.keys(authHeaders).length > 0) {
+      config.headers = { ...config.headers, ...authHeaders }
+    }
     return config
   },
   (error) => {
