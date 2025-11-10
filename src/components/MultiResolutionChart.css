@@ -455,3 +455,70 @@
   }
 }
 
+/* Indicator Selector */
+.indicator-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.indicator-selector label {
+  color: #666;
+  font-size: 12px;
+  font-weight: normal;
+}
+
+.indicator-dropdown {
+  padding: 4px 8px;
+  background: white;
+  color: #333;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  font-size: 12px;
+  min-width: 150px;
+}
+
+/* Indicator Chips */
+.indicator-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.indicator-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  background: white;
+}
+
+.indicator-chip span {
+  line-height: 1;
+}
+
+.indicator-remove-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.indicator-remove-btn:hover {
+  opacity: 0.7;
+}
+

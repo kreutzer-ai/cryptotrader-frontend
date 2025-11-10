@@ -6,8 +6,11 @@ import CyclesPanel from './components/CyclesPanel'
 import WalletManager from './components/WalletManager'
 import UserManager from './components/UserManager'
 import LiquidationCurveOverlay from './components/LiquidationCurveOverlay'
+import IndicatorManager from './components/IndicatorManager'
 import EventLog from './components/EventLog'
 import Login from './components/Login'
+import StrategyBuilder from './components/StrategyBuilder'
+import SignalManager from './components/SignalManager'
 import { fetchStrategies } from './services/cryptotraderApi'
 import { isAuthenticated, logout, getCurrentUser } from './services/authService'
 import './App.css'
@@ -65,13 +68,13 @@ function App() {
 
     if (limitParam) {
       const limit = Number(limitParam)
-      if (!isNaN(limit) && limit > 0 && limit <= 10000) {
+      if (!isNaN(limit) && limit > 0 && limit <= 2592000) {
         return limit
       }
     }
 
-    // Default limit
-    return 300
+    // Default limit: 1 hour (3600 seconds) for 1-min candles
+    return 3600
   }
 
   const getInitialStrategy = () => {
@@ -87,7 +90,7 @@ function App() {
   const [selectedPositions, setSelectedPositions] = useState([]) // Positions to visualize on chart
   const [selectedStrategy, setSelectedStrategy] = useState(null) // Currently selected strategy
   const [chartType, setChartType] = useState('multiresolution') // 'tradingview', 'recharts', 'echarts', or 'multiresolution'
-  const [activeTab, setActiveTab] = useState('chart') // 'chart' or 'strategies'
+  const [activeTab, setActiveTab] = useState('chart') // 'chart', 'strategies', 'wallets', 'users', 'indicators', 'events', 'signals'
   const [strategies, setStrategies] = useState([])
   const [strategiesLoading, setStrategiesLoading] = useState(false)
   const [showLiquidationOverlay, setShowLiquidationOverlay] = useState(false)
@@ -178,6 +181,18 @@ function App() {
               Chart
             </button>
             <button
+              className={`tab-btn ${activeTab === 'strategies' ? 'active' : ''}`}
+              onClick={() => setActiveTab('strategies')}
+            >
+              Strategies
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'signals' ? 'active' : ''}`}
+              onClick={() => setActiveTab('signals')}
+            >
+              Signals
+            </button>
+            <button
               className={`tab-btn ${activeTab === 'wallets' ? 'active' : ''}`}
               onClick={() => setActiveTab('wallets')}
             >
@@ -202,6 +217,12 @@ function App() {
               onClick={() => setShowLiquidationOverlay(true)}
             >
               Liquidation
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'indicators' ? 'active' : ''}`}
+              onClick={() => setActiveTab('indicators')}
+            >
+              Indicators
             </button>
           </div>
 
@@ -271,10 +292,16 @@ function App() {
               />
             )}
           </>
+        ) : activeTab === 'strategies' ? (
+          <StrategyBuilder />
+        ) : activeTab === 'signals' ? (
+          <SignalManager />
         ) : activeTab === 'wallets' ? (
           <WalletManager />
         ) : activeTab === 'users' ? (
           <UserManager />
+        ) : activeTab === 'indicators' ? (
+          <IndicatorManager interval={candleInterval} />
         ) : null}
 
         {/* EventLog always mounted, just hidden */}

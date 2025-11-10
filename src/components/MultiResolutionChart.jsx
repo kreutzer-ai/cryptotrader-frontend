@@ -1,16 +1,30 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { fetchCandles, fetchPriceTicks, fetch15SecCandles, exportCandlesCsv, export15SecCandlesCsv, exportPriceTicksCsv, exportAllCandlesCsv, exportAll15SecCandlesCsv, exportAllPriceTicksCsv } from '../services/cryptotraderApi'
+import {
+  fetchCandles,
+  fetchCandlesRange,
+  fetchPriceTicks,
+  fetchPriceTicksRange,
+  fetch15SecCandles,
+  fetch15SecCandlesRange,
+  exportCandlesCsv,
+  export15SecCandlesCsv,
+  exportPriceTicksCsv,
+  exportAllCandlesCsv,
+  exportAll15SecCandlesCsv,
+  exportAllPriceTicksCsv,
+  fetchAvailableIndicators
+} from '../services/cryptotraderApi'
 import './MultiResolutionChart.css'
 
-const MultiResolutionChart = ({ 
-  selectedMAs, 
-  setSelectedMAs, 
-  cycles = [], 
-  selectedPositions = [], 
-  selectedStrategy = null, 
-  candleLimit = 300, 
-  setCandleLimit 
+const MultiResolutionChart = ({
+  selectedMAs,
+  setSelectedMAs,
+  cycles = [],
+  selectedPositions = [],
+  selectedStrategy = null,
+  candleLimit = 3600, // Default to 1 hour for 1-min candles
+  setCandleLimit
 }) => {
   const [chartData, setChartData] = useState([])
   const [loading, setLoading] = useState(true)
@@ -22,12 +36,29 @@ const MultiResolutionChart = ({
   const [showPositions, setShowPositions] = useState(true) // Toggle position markers visibility
   const [showCandles, setShowCandles] = useState(true) // Toggle candle/line visibility
   const [selectedMADerivations, setSelectedMADerivations] = useState([]) // MA derivations to display
+  const [selectedIndicators, setSelectedIndicators] = useState([]) // Selected indicators to display
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState(null)
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const [dataZoomState, setDataZoomState] = useState(null) // Track zoom/pan state (null = use default)
   const chartRef = useRef(null)
   const prevDataRef = useRef(null)
+  const userHasZoomedRef = useRef(false) // Track if user has manually zoomed
   const SOL_MINT = 'So11111111111111111111111111111111111111112'
+
+  // Available indicators (loaded from backend)
+  const [availableIndicators, setAvailableIndicators] = useState([])
+
+  // Indicator management
+  const handleAddIndicator = (indicatorKey) => {
+    if (!selectedIndicators.includes(indicatorKey)) {
+      setSelectedIndicators([...selectedIndicators, indicatorKey])
+    }
+  }
+
+  const handleRemoveIndicator = (indicatorKey) => {
+    setSelectedIndicators(selectedIndicators.filter(key => key !== indicatorKey))
+  }
 
   // MA management
   const handleAddMA = (period) => {
@@ -141,75 +172,101 @@ const MultiResolutionChart = ({
     }
   }
 
-  // Resolution-specific presets
-  const getPresetLimits = () => {
+  // Resolution-specific presets (now in seconds for time ranges)
+  const getPresetTimeRanges = () => {
     switch (resolution) {
       case 'tick':
         return [
-          { label: '1min', value: 20 },
-          { label: '5min', value: 100 },
-          { label: '15min', value: 300 },
-          { label: '30min', value: 600 },
-          { label: '1h', value: 1200 },
-          { label: '2h', value: 2400 },
-          { label: '4h', value: 4800 },
-          { label: '8h', value: 9600 },
-          { label: '12h', value: 14400 },
-          { label: '1d', value: 28800 },
-          { label: '2d', value: 57600 },
-          { label: '3d', value: 86400 },
-          { label: '1w', value: 201600 }
+          { label: '1min', seconds: 60 },
+          { label: '5min', seconds: 300 },
+          { label: '15min', seconds: 900 },
+          { label: '30min', seconds: 1800 },
+          { label: '1h', seconds: 3600 },
+          { label: '2h', seconds: 7200 },
+          { label: '4h', seconds: 14400 },
+          { label: '8h', seconds: 28800 },
+          { label: '12h', seconds: 43200 },
+          { label: '1d', seconds: 86400 },
+          { label: '2d', seconds: 172800 },
+          { label: '3d', seconds: 259200 },
+          { label: '1w', seconds: 604800 }
         ]
       case '15sec':
         return [
-          { label: '15min', value: 60 },
-          { label: '30min', value: 120 },
-          { label: '1h', value: 240 },
-          { label: '2h', value: 480 },
-          { label: '4h', value: 960 },
-          { label: '8h', value: 1920 },
-          { label: '12h', value: 2880 },
-          { label: '1d', value: 5760 },
-          { label: '2d', value: 11520 },
-          { label: '3d', value: 17280 },
-          { label: '1w', value: 40320 }
+          { label: '15min', seconds: 900 },
+          { label: '30min', seconds: 1800 },
+          { label: '1h', seconds: 3600 },
+          { label: '2h', seconds: 7200 },
+          { label: '4h', seconds: 14400 },
+          { label: '8h', seconds: 28800 },
+          { label: '12h', seconds: 43200 },
+          { label: '1d', seconds: 86400 },
+          { label: '2d', seconds: 172800 },
+          { label: '3d', seconds: 259200 },
+          { label: '1w', seconds: 604800 }
         ]
       case '1min':
       default:
         return [
-          { label: '1h', value: 60 },
-          { label: '2h', value: 120 },
-          { label: '4h', value: 240 },
-          { label: '8h', value: 480 },
-          { label: '12h', value: 720 },
-          { label: '1d', value: 1440 },
-          { label: '2d', value: 2880 },
-          { label: '3d', value: 4320 },
-          { label: '1w', value: 10080 },
-          { label: '2w', value: 20160 },
-          { label: '1mo', value: 43200 }
+          { label: '1h', seconds: 3600 },
+          { label: '2h', seconds: 7200 },
+          { label: '4h', seconds: 14400 },
+          { label: '8h', seconds: 28800 },
+          { label: '12h', seconds: 43200 },
+          { label: '1d', seconds: 86400 },
+          { label: '2d', seconds: 172800 },
+          { label: '3d', seconds: 259200 },
+          { label: '1w', seconds: 604800 },
+          { label: '2w', seconds: 1209600 },
+          { label: '1mo', seconds: 2592000 }
         ]
     }
   }
 
-  const handleLimitChange = (e) => {
+  const handleTimeRangeChange = (e) => {
     const value = parseInt(e.target.value)
-    if (!isNaN(value) && value > 0 && value <= 500000) {
+    if (!isNaN(value) && value >= 60 && value <= 2592000) {
       setCandleLimit(value)
+      // Reset zoom when time range changes
+      setDataZoomState(null)
+      userHasZoomedRef.current = false
     }
   }
 
   const handleResolutionChange = (newResolution) => {
     setResolution(newResolution)
-    // Adjust limit based on resolution
+    // Reset zoom when resolution changes
+    setDataZoomState(null)
+    userHasZoomedRef.current = false
+    // Adjust time range based on resolution (in seconds)
     if (newResolution === 'tick') {
-      setCandleLimit(100) // Default: 5 minutes of ticks
+      setCandleLimit(300) // Default: 5 minutes
     } else if (newResolution === '15sec') {
-      setCandleLimit(240) // Default: 1 hour of 15-sec candles
+      setCandleLimit(3600) // Default: 1 hour
     } else {
-      setCandleLimit(300) // Default: 5 hours of 1-min candles
+      setCandleLimit(3600) // Default: 1 hour
     }
   }
+
+  // Load available indicators when resolution changes
+  useEffect(() => {
+    const loadIndicators = async () => {
+      try {
+        const indicators = await fetchAvailableIndicators(resolution)
+        console.log('Loaded indicators for', resolution, ':', indicators)
+        setAvailableIndicators(indicators)
+      } catch (error) {
+        console.error('Error loading indicators:', error)
+        setAvailableIndicators([])
+      }
+    }
+
+    if (resolution === '1min' || resolution === '15sec') {
+      loadIndicators()
+    } else {
+      setAvailableIndicators([])
+    }
+  }, [resolution])
 
   // Load data based on resolution
   useEffect(() => {
@@ -221,10 +278,18 @@ const MultiResolutionChart = ({
         let data
         const mint = 'So11111111111111111111111111111111111111112'
 
+        // Calculate time range (candleLimit is now in seconds)
+        const now = Math.floor(Date.now() / 1000) // Current time in seconds
+        const startTime = now - candleLimit // Go back by the time range
+        const endTime = now
+
+        console.log(`Fetching ${resolution} data - Time range: ${candleLimit}s (${new Date(startTime * 1000).toISOString()} to ${new Date(endTime * 1000).toISOString()})`)
+
         if (resolution === 'tick') {
-          // Fetch price ticks
-          data = await fetchPriceTicks(mint, candleLimit)
-          
+          // Fetch price ticks in time range
+          data = await fetchPriceTicksRange(mint, startTime, endTime)
+          console.log(`Fetched ${data.length} price ticks`)
+
           // Convert to chart format (line chart for ticks)
           const dataWithMs = data.map(tick => ({
             time: tick.time * 1000,
@@ -250,8 +315,9 @@ const MultiResolutionChart = ({
           }
 
         } else if (resolution === '15sec') {
-          // Fetch 15-second candles
-          data = await fetch15SecCandles(mint, candleLimit)
+          // Fetch 15-second candles in time range
+          data = await fetch15SecCandlesRange(mint, startTime, endTime)
+          console.log(`Fetched ${data.length} 15-second candles`)
 
           const dataWithMs = data.map((candle, index) => {
             // Calculate MA derivations (compare with previous candle)
@@ -282,12 +348,20 @@ const MultiResolutionChart = ({
               numberOfTicks: candle.numberOfTicks,
               complete: candle.complete,
               movingAverages: candle.movingAverages || {},
+              indicators: candle.indicators || {},
               maDerivations,
               maDerivationPercents,
               direction: candle.direction,
               type: 'candle'
             }
           })
+
+          console.log(`Fetched ${dataWithMs.length} 15-sec candles`)
+          if (dataWithMs.length > 0) {
+            console.log('Sample 15-sec candle:', dataWithMs[0])
+            console.log('Indicators in first candle:', dataWithMs[0].indicators)
+          }
+
           setChartData(dataWithMs)
 
           // Calculate stats from latest candle
@@ -308,8 +382,9 @@ const MultiResolutionChart = ({
           }
 
         } else {
-          // Fetch 1-minute candles (existing)
-          data = await fetchCandles(mint, candleLimit)
+          // Fetch 1-minute candles in time range
+          data = await fetchCandlesRange(mint, startTime, endTime)
+          console.log(`Fetched ${data.length} 1-minute candles`)
 
           const dataWithMs = data.map((candle, index) => {
             // Calculate MA derivations (compare with previous candle)
@@ -338,6 +413,14 @@ const MultiResolutionChart = ({
               maDerivationPercents
             }
           })
+
+          console.log(`Fetched ${dataWithMs.length} 1-minute candles`)
+          if (dataWithMs.length > 0) {
+            console.log('Sample 1-min candle:', dataWithMs[0])
+            console.log('Indicators in first candle:', dataWithMs[0].indicators)
+            console.log('Available indicator keys:', Object.keys(dataWithMs[0].indicators || {}))
+          }
+
           setChartData(dataWithMs)
 
           // Calculate stats from latest candle
@@ -625,6 +708,15 @@ const MultiResolutionChart = ({
         },
         xAxis: {
           type: 'time',
+          min: () => {
+            // Set min to the start of the requested time range
+            const now = Date.now()
+            return now - (candleLimit * 1000)
+          },
+          max: () => {
+            // Set max to current time
+            return Date.now()
+          },
           axisLabel: {
             color: '#666',
             formatter: (value) => {
@@ -647,13 +739,13 @@ const MultiResolutionChart = ({
         dataZoom: [
           {
             type: 'inside',
-            start: 0,
-            end: 100
+            start: dataZoomState?.start ?? 0,
+            end: dataZoomState?.end ?? 100
           },
           {
             type: 'slider',
-            start: 0,
-            end: 100,
+            start: dataZoomState?.start ?? 0,
+            end: dataZoomState?.end ?? 100,
             bottom: '5%',
             textStyle: { color: '#666' },
             borderColor: '#ddd',
@@ -764,6 +856,118 @@ const MultiResolutionChart = ({
       })
     }
 
+    // Add indicator lines in separate sub-charts
+    const indicatorGrids = []
+    const indicatorXAxes = []
+    const indicatorYAxes = []
+    const indicatorSeries = []
+
+    if (!isTick && selectedIndicators.length > 0) {
+      console.log('Adding indicator sub-charts, selectedIndicators:', selectedIndicators)
+      console.log('Available indicators:', availableIndicators)
+
+      const colors = ['#ff9800', '#03a9f4', '#4caf50', '#e91e63', '#9c27b0']
+      const numIndicators = selectedIndicators.length
+
+      // Calculate grid heights
+      // Main chart gets 60%, indicators share the remaining 40%
+      const mainChartHeight = 60
+      const indicatorTotalHeight = 35
+      const indicatorHeight = indicatorTotalHeight / numIndicators
+
+      selectedIndicators.forEach((indicatorKey, index) => {
+        const indicator = availableIndicators.find(ind => ind.key === indicatorKey)
+        console.log(`Looking for indicator ${indicatorKey}, found:`, indicator)
+        if (!indicator) {
+          console.warn(`Indicator ${indicatorKey} not found in availableIndicators`)
+          return
+        }
+
+        const indicatorData = chartData.map(c => {
+          const value = c.indicators?.[indicatorKey]
+          return [c.time, value !== undefined && value !== null ? Number(value) : null]
+        }).filter(([time, value]) => value !== null)
+
+        console.log(`Indicator ${indicatorKey} data points:`, indicatorData.length, 'sample:', indicatorData.slice(0, 3))
+
+        // Grid for this indicator sub-chart
+        const gridTop = mainChartHeight + (index * indicatorHeight)
+        indicatorGrids.push({
+          left: '3%',
+          right: '3%',
+          top: `${gridTop}%`,
+          height: `${indicatorHeight - 2}%`,
+          containLabel: true
+        })
+
+        // X-axis for this indicator (linked to main chart with same min/max)
+        indicatorXAxes.push({
+          type: 'time',
+          gridIndex: index + 1,
+          show: index === numIndicators - 1, // Only show on last indicator
+          min: () => {
+            const now = Date.now()
+            return now - (candleLimit * 1000)
+          },
+          max: () => Date.now(),
+          axisLabel: { color: '#666' },
+          axisLine: { lineStyle: { color: '#ddd' } }
+        })
+
+        // Y-axis for this indicator - auto-scale based on actual data range
+        // Calculate min/max from actual data for better visibility
+        const values = indicatorData.map(([time, value]) => value).filter(v => v !== null)
+        let minValue = Math.min(...values)
+        let maxValue = Math.max(...values)
+
+        // Add 5% padding for better visibility
+        const range = maxValue - minValue
+        const padding = range * 0.05
+        minValue = minValue - padding
+        maxValue = maxValue + padding
+
+        const yAxisConfig = {
+          type: 'value',
+          gridIndex: index + 1,
+          scale: true,
+          min: minValue,
+          max: maxValue,
+          name: indicator.label,
+          nameTextStyle: { color: colors[index % colors.length], fontSize: 11 },
+          axisLabel: {
+            color: '#666',
+            formatter: (value) => value.toFixed(2)
+          },
+          axisLine: { lineStyle: { color: '#ddd' } },
+          splitLine: { lineStyle: { color: '#f5f5f5' } }
+        }
+
+        indicatorYAxes.push(yAxisConfig)
+
+        // Series for this indicator
+        indicatorSeries.push({
+          name: indicator.label,
+          type: 'line',
+          data: indicatorData,
+          xAxisIndex: index + 1,
+          yAxisIndex: index + 1 + (selectedMADerivations.length > 0 ? 1 : 0),
+          smooth: true,
+          symbol: 'none',
+          lineStyle: { color: colors[index % colors.length], width: 2 }
+        })
+      })
+
+      // Add all indicator series to main series array
+      series.push(...indicatorSeries)
+    }
+
+    console.log('Total series count:', series.length)
+    console.log('All series:', series.map(s => ({ name: s.name, type: s.type, dataPoints: s.data?.length })))
+
+    // Calculate main chart height based on number of indicators
+    const hasIndicators = selectedIndicators.length > 0
+    const mainChartHeight = hasIndicators ? 60 : 85
+
     return {
       animation: false,
       backgroundColor: '#fff',
@@ -774,21 +978,40 @@ const MultiResolutionChart = ({
         borderColor: '#ccc',
         textStyle: { color: '#333' }
       },
-      grid: {
-        left: '3%',
-        right: '3%',
-        bottom: '15%',
-        top: '3%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'time',
-        axisLabel: { color: '#666' },
-        axisLine: { lineStyle: { color: '#ddd' } }
-      },
+      grid: [
+        // Main chart grid
+        {
+          left: '3%',
+          right: '3%',
+          top: '3%',
+          height: `${mainChartHeight}%`,
+          containLabel: true
+        },
+        // Indicator sub-chart grids
+        ...indicatorGrids
+      ],
+      xAxis: [
+        // Main chart X-axis
+        {
+          type: 'time',
+          gridIndex: 0,
+          show: !hasIndicators, // Hide if indicators are shown (they have their own)
+          min: () => {
+            const now = Date.now()
+            return now - (candleLimit * 1000)
+          },
+          max: () => Date.now(),
+          axisLabel: { color: '#666' },
+          axisLine: { lineStyle: { color: '#ddd' } }
+        },
+        // Indicator X-axes
+        ...indicatorXAxes
+      ],
       yAxis: [
+        // Main chart Y-axis (price)
         {
           type: 'value',
+          gridIndex: 0,
           scale: true,
           position: 'left',
           axisLabel: {
@@ -801,30 +1024,41 @@ const MultiResolutionChart = ({
         // Second Y-axis for MA derivations (percentage)
         ...(selectedMADerivations.length > 0 ? [{
           type: 'value',
+          gridIndex: 0,
           scale: true,
           position: 'right',
+          offset: 0,
           axisLabel: {
             color: '#9c27b0',
             formatter: (value) => `${value.toFixed(2)}%`
           },
           axisLine: { lineStyle: { color: '#ddd' } },
           splitLine: { show: false }
-        }] : [])
+        }] : []),
+        // Indicator Y-axes
+        ...indicatorYAxes
       ],
       dataZoom: [
-        { type: 'inside', start: 0, end: 100 },
+        {
+          type: 'inside',
+          start: dataZoomState?.start ?? 0,
+          end: dataZoomState?.end ?? 100,
+          xAxisIndex: [0, ...indicatorXAxes.map((_, i) => i + 1)] // Link all X-axes
+        },
         {
           type: 'slider',
-          start: 0,
-          end: 100,
-          bottom: '5%',
+          start: dataZoomState?.start ?? 0,
+          end: dataZoomState?.end ?? 100,
+          bottom: '2%',
+          height: 20,
           textStyle: { color: '#666' },
-          borderColor: '#ddd'
+          borderColor: '#ddd',
+          xAxisIndex: [0, ...indicatorXAxes.map((_, i) => i + 1)] // Link all X-axes
         }
       ],
       series
     }
-  }, [chartData, resolution, selectedMAs, selectedMADerivations, showCandles, prepareMarkAreas, preparePositionMarkers, prepareThresholdLines])
+  }, [chartData, resolution, selectedMAs, selectedMADerivations, selectedIndicators, availableIndicators, showCandles, prepareMarkAreas, preparePositionMarkers, prepareThresholdLines, dataZoomState, candleLimit])
 
   return (
     <div className="multi-resolution-chart">
@@ -844,16 +1078,21 @@ const MultiResolutionChart = ({
           </select>
         </div>
 
-        {/* Limit Controls */}
+        {/* Time Range Controls */}
         <div className="limit-controls">
           <label>Time Range:</label>
           <select
             value={candleLimit}
-            onChange={(e) => setCandleLimit(Number(e.target.value))}
+            onChange={(e) => {
+              setCandleLimit(Number(e.target.value))
+              // Reset zoom when preset changes
+              setDataZoomState(null)
+              userHasZoomedRef.current = false
+            }}
             className="limit-dropdown"
           >
-            {getPresetLimits().map(preset => (
-              <option key={preset.value} value={preset.value}>
+            {getPresetTimeRanges().map(preset => (
+              <option key={preset.seconds} value={preset.seconds}>
                 {preset.label}
               </option>
             ))}
@@ -862,12 +1101,13 @@ const MultiResolutionChart = ({
           <input
             type="number"
             value={candleLimit}
-            onChange={handleLimitChange}
-            min="1"
-            max="500000"
+            onChange={handleTimeRangeChange}
+            min="60"
+            max="2592000"
+            step="60"
             className="limit-input"
-            placeholder="Custom limit"
-            title="Enter custom data point limit (1-500000)"
+            placeholder="Seconds"
+            title="Enter custom time range in seconds (60-2592000)"
           />
         </div>
 
@@ -914,6 +1154,60 @@ const MultiResolutionChart = ({
                     className="ma-deriv-remove-btn"
                     onClick={() => handleRemoveMADerivation(period)}
                     title={`Remove MA${period} derivation`}
+                  >
+                    ×
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Indicator Selector - Only show for 1-min candles */}
+        {resolution === '1min' && (
+          <div className="indicator-selector">
+            <label>Add Indicator:</label>
+            <select
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleAddIndicator(e.target.value)
+                  e.target.value = '' // Reset selection
+                }
+              }}
+              className="indicator-dropdown"
+            >
+              <option value="">Select...</option>
+              {availableIndicators
+                .filter(ind => !selectedIndicators.includes(ind.key))
+                .map(ind => (
+                  <option key={ind.key} value={ind.key}>
+                    {ind.label}
+                  </option>
+                ))}
+            </select>
+          </div>
+        )}
+
+        {/* Indicator Chips - Only show for 1-min candles */}
+        {resolution === '1min' && selectedIndicators.length > 0 && (
+          <div className="indicator-chips">
+            {selectedIndicators.map((indicatorKey, index) => {
+              const indicator = availableIndicators.find(ind => ind.key === indicatorKey)
+              if (!indicator) return null
+
+              const colors = ['#ff9800', '#03a9f4', '#4caf50', '#e91e63', '#9c27b0']
+              const color = colors[index % colors.length]
+              return (
+                <div
+                  key={indicatorKey}
+                  className="indicator-chip"
+                  style={{ borderColor: color, color: color }}
+                >
+                  <span>{indicator.label}</span>
+                  <button
+                    className="indicator-remove-btn"
+                    onClick={() => handleRemoveIndicator(indicatorKey)}
+                    title={`Remove ${indicator.label}`}
                   >
                     ×
                   </button>
@@ -1074,6 +1368,40 @@ const MultiResolutionChart = ({
                   }
                 }
               }
+            },
+            dataZoom: (params) => {
+              console.log('dataZoom event:', params)
+
+              // Only capture if user has manually interacted with zoom
+              // We detect user interaction by checking if the zoom values are different from defaults
+              let zoomStart, zoomEnd
+
+              if (params.batch && params.batch.length > 0) {
+                const zoom = params.batch[0]
+                zoomStart = zoom.start
+                zoomEnd = zoom.end
+              } else {
+                zoomStart = params.start
+                zoomEnd = params.end
+              }
+
+              // If zoom values are undefined, skip
+              if (zoomStart === undefined || zoomEnd === undefined) {
+                return
+              }
+
+              // Check if this is different from default (0, 100)
+              const isNotDefault = Math.abs(zoomStart - 0) > 0.1 || Math.abs(zoomEnd - 100) > 0.1
+
+              if (isNotDefault) {
+                // User has zoomed - mark it and save state
+                userHasZoomedRef.current = true
+                setDataZoomState({ start: zoomStart, end: zoomEnd })
+              } else if (userHasZoomedRef.current) {
+                // User previously zoomed, now back to default - save it
+                setDataZoomState({ start: zoomStart, end: zoomEnd })
+              }
+              // Otherwise, ignore (initial render with default values)
             }
           }}
         />

@@ -242,6 +242,19 @@
   color: #9c27b0;
 }
 
+.event-signal {
+  border-left-color: #ffc107;
+  background: rgba(255, 193, 7, 0.05);
+}
+
+.event-signal .event-type {
+  color: #ffc107;
+}
+
+.event-signal .event-message {
+  font-weight: 500;
+}
+
 .event-system {
   border-left-color: #4caf50;
   background: rgba(76, 175, 80, 0.05);

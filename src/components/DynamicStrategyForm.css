@@ -1,0 +1,276 @@
+.dynamic-strategy-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dynamic-strategy-form h3 {
+  margin: 0 0 15px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.preset-selector {
+  padding: 15px;
+  background: #1e2139;
+  border: 1px solid #2a2e45;
+  border-radius: 8px;
+}
+
+.preset-selector label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+
+.preset-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preset-btn {
+  padding: 12px 15px;
+  background: #0a0e27;
+  border: 2px solid #2a2e45;
+  border-radius: 6px;
+  color: #e0e0e0;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-btn:hover {
+  background: #12162e;
+  border-color: #3a3e55;
+}
+
+.preset-btn.active {
+  background: #1e3a5f;
+  border-color: #4a90e2;
+}
+
+.preset-desc {
+  display: block;
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+.form-section {
+  padding: 15px;
+  background: #1e2139;
+  border: 1px solid #2a2e45;
+  border-radius: 8px;
+}
+
+.form-section h4 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #2a2e45;
+}
+
+.form-field {
+  margin-bottom: 15px;
+}
+
+.form-field:last-child {
+  margin-bottom: 0;
+}
+
+.form-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+
+.required {
+  color: #ef4444;
+  margin-left: 4px;
+}
+
+.form-field input[type="text"],
+.form-field input[type="number"],
+.form-field select {
+  width: 100%;
+  padding: 10px 12px;
+  background: #0a0e27;
+  border: 1px solid #2a2e45;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-field input:focus,
+.form-field select:focus {
+  border-color: #4a90e2;
+}
+
+.form-field input.error,
+.form-field select.error {
+  border-color: #ef4444;
+}
+
+.slider-input {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.slider-input input[type="range"] {
+  flex: 1;
+  height: 6px;
+  background: #2a2e45;
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.slider-input input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #4a90e2;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.slider-input input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #4a90e2;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+.slider-value {
+  min-width: 60px;
+  padding: 6px 12px;
+  background: #0a0e27;
+  border: 1px solid #2a2e45;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 14px;
+  color: #e0e0e0;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.field-description {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.4;
+}
+
+.error-message {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #ef4444;
+}
+
+.submit-error {
+  padding: 12px;
+  background: #7f1d1d;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  color: #fecaca;
+  font-size: 14px;
+}
+
+.btn-submit {
+  width: 100%;
+  padding: 14px;
+  background: #4a90e2;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #357abd;
+}
+
+.btn-submit:disabled {
+  background: #2a2e45;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* Signal Selector Styles */
+.signal-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.signal-selector select {
+  width: 100%;
+  padding: 8px 12px;
+  background: #0a0e27;
+  border: 1px solid #2a2e45;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 14px;
+}
+
+.signal-selector select:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.signal-preview {
+  padding: 10px;
+  background: #1e2139;
+  border: 1px solid #2a2e45;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.signal-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.signal-type {
+  color: #4a9eff;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.signal-config {
+  color: #9ca3af;
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+}

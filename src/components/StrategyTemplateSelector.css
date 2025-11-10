@@ -1,0 +1,149 @@
+.strategy-template-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.strategy-template-selector h3 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.template-search {
+  width: 100%;
+  padding: 10px 12px;
+  background: #0a0e27;
+  border: 1px solid #2a2e45;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.template-search:focus {
+  border-color: #4a90e2;
+}
+
+.template-search::placeholder {
+  color: #6b7280;
+}
+
+.category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.category-btn {
+  padding: 6px 12px;
+  background: #1e2139;
+  border: 1px solid #2a2e45;
+  border-radius: 4px;
+  color: #9ca3af;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.category-btn:hover {
+  background: #2a2e45;
+  color: #e0e0e0;
+}
+
+.category-btn.active {
+  background: #4a90e2;
+  border-color: #4a90e2;
+  color: white;
+}
+
+.template-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.no-templates {
+  text-align: center;
+  color: #6b7280;
+  padding: 20px;
+  font-size: 14px;
+}
+
+.template-card {
+  padding: 15px;
+  background: #1e2139;
+  border: 2px solid #2a2e45;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.template-card:hover {
+  background: #252a42;
+  border-color: #3a3e55;
+}
+
+.template-card.selected {
+  background: #1e3a5f;
+  border-color: #4a90e2;
+}
+
+.template-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  gap: 10px;
+}
+
+.template-header h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  flex: 1;
+}
+
+.template-type {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.template-type.cycle_based {
+  background: #3b82f6;
+  color: white;
+}
+
+.template-type.continuous {
+  background: #10b981;
+  color: white;
+}
+
+.template-type.single_position {
+  background: #f59e0b;
+  color: white;
+}
+
+.template-description {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #9ca3af;
+  line-height: 1.4;
+}
+
+.template-category {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #2a2e45;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #6b7280;
+}
+

@@ -62,6 +62,41 @@ export const fetchCandles = async (mint = SOL_MINT, limit = 300, interval = '1mi
 }
 
 /**
+ * Fetch candles in a time range
+ * @param {string} mint - Token mint address
+ * @param {number} startTime - Start timestamp (Unix seconds)
+ * @param {number} endTime - End timestamp (Unix seconds)
+ * @param {string} interval - Candle interval: "15sec" or "1min" (default: "1min")
+ * @returns {Promise<Array>} Array of candle data
+ */
+export const fetchCandlesRange = async (mint = SOL_MINT, startTime, endTime, interval = '1min') => {
+  try {
+    const response = await axios.get(`${JUPITER_PRICE_API_BASE}/candles/${mint}/range`, {
+      params: { startTime, endTime, interval }
+    })
+
+    // Transform and sort by timestamp ascending (oldest first)
+    const sortedData = response.data.sort((a, b) => a.timestamp - b.timestamp)
+
+    return sortedData.map(candle => ({
+      time: candle.timestamp,
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close,
+      movingAverages: candle.movingAverages || {},
+      indicators: candle.indicators || {},
+      direction: candle.direction,
+      complete: candle.complete,
+      numberOfPolls: candle.numberOfPolls,
+    }))
+  } catch (error) {
+    console.error('Error fetching candles range:', error)
+    throw new Error('Failed to fetch candles in time range')
+  }
+}
+
+/**
  * Fetch current price for Solana
  * @returns {Promise<number>} Current price
  */
@@ -156,7 +191,8 @@ export const fetchCyclePositions = async (cycleId) => {
 }
 
 /**
- * Fetch price ticks (raw price updates every 3 seconds)
+ * Fetch price ticks (raw price updates polled every 3 seconds from Jupiter API)
+ * Note: Actual interval is 3 seconds, so 20 ticks/min, 1200 ticks/hour, 28800 ticks/day
  * @param {string} mint - Token mint address (default: SOL)
  * @param {number} limit - Number of ticks to fetch (default: 100)
  * @returns {Promise<Array>} Array of price tick data
@@ -557,5 +593,82 @@ export const fetchStrategyPositions = async (strategyId) => {
   } catch (error) {
     console.error(`Error fetching positions for strategy ${strategyId}:`, error)
     throw new Error('Failed to fetch strategy positions')
+  }
+}
+
+/**
+ * Fetch available indicators for a specific interval
+ * @param {string} interval - Candle interval: "15sec" or "1min" (default: "1min")
+ * @returns {Promise<Array>} Array of indicator metadata
+ */
+export const fetchAvailableIndicators = async (interval = '1min') => {
+  try {
+    const response = await axios.get(`${JUPITER_PRICE_API_BASE}/indicators/available`, {
+      params: { interval }
+    })
+    return response.data
+  } catch (error) {
+    console.error('Error fetching available indicators:', error)
+    throw new Error('Failed to fetch available indicators')
+  }
+}
+
+/**
+ * Register a new indicator dynamically
+ * @param {string} interval - Interval (1min, 15sec, tick)
+ * @param {string} type - Indicator type (MA, RSI, MA_DERIVATION, etc.)
+ * @param {number} period - Period parameter
+ * @param {object} parameters - Additional parameters
+ * @param {boolean} backfill - Whether to backfill historical values
+ * @param {number} backfillPeriods - Number of periods to backfill
+ * @returns {Promise<object>} Registration result
+ */
+export const registerIndicator = async (interval, type, period, parameters = {}, backfill = false, backfillPeriods = 500) => {
+  try {
+    const response = await axios.post(`${JUPITER_PRICE_API_BASE}/indicators/register`, {
+      interval,
+      type,
+      period,
+      parameters,
+      backfill,
+      backfillPeriods
+    })
+    return response.data
+  } catch (error) {
+    console.error('Error registering indicator:', error)
+    throw new Error(error.response?.data || 'Failed to register indicator')
+  }
+}
+
+/**
+ * Deregister an indicator
+ * @param {string} interval - Interval (1min, 15sec, tick)
+ * @param {string} indicatorKey - Indicator key to remove
+ * @returns {Promise<object>} Deregistration result
+ */
+export const deregisterIndicator = async (interval, indicatorKey) => {
+  try {
+    const response = await axios.delete(`${JUPITER_PRICE_API_BASE}/indicators/${interval}/${indicatorKey}`)
+    return response.data
+  } catch (error) {
+    console.error('Error deregistering indicator:', error)
+    throw new Error(error.response?.data || 'Failed to deregister indicator')
+  }
+}
+
+/**
+ * Get all registered indicators for an interval
+ * @param {string} interval - Interval (1min, 15sec, tick)
+ * @returns {Promise<Array>} Array of registered indicator configurations
+ */
+export const getRegisteredIndicators = async (interval) => {
+  try {
+    const response = await axios.get(`${JUPITER_PRICE_API_BASE}/indicators/registered`, {
+      params: { interval }
+    })
+    return response.data
+  } catch (error) {
+    console.error('Error fetching registered indicators:', error)
+    throw new Error('Failed to fetch registered indicators')
   }
 }

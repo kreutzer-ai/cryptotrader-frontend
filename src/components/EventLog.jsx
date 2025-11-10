@@ -132,6 +132,7 @@ const EventLog = memo(({ isVisible = true }) => {
     priceTicks: true,
     candles: true,
     indicators: false, // Off by default (425 events/min!)
+    signals: true, // Show signals by default
     maOnly: false,
     rsiOnly: false,
     maDerivationOnly: false,
@@ -151,6 +152,7 @@ const EventLog = memo(({ isVisible = true }) => {
       ticks: 0,
       candles: 0,
       indicators: 0,
+      signals: 0,
       total: events.length
     }
 
@@ -158,6 +160,7 @@ const EventLog = memo(({ isVisible = true }) => {
       if (event.type === 'PRICE_TICK') stats.ticks++
       else if (event.type === 'CANDLE_COMPLETED') stats.candles++
       else if (event.type === 'INDICATOR_CALCULATED') stats.indicators++
+      else if (event.type === 'SIGNAL') stats.signals++
     })
 
     return stats
@@ -272,6 +275,21 @@ const EventLog = memo(({ isVisible = true }) => {
       })
     })
 
+    eventSource.addEventListener('signal', (e) => {
+      if (isPausedRef.current) return
+      const data = JSON.parse(e.data)
+      const priceStr = data.currentPrice ? ` @ $${parseFloat(data.currentPrice).toFixed(4)}` : ''
+      const indicatorStr = data.indicators && Object.keys(data.indicators).length > 0
+        ? ` [${Object.keys(data.indicators).length} indicators]`
+        : ''
+      addEvent({
+        type: 'SIGNAL',
+        time: new Date(data.timestamp),
+        message: `${data.signalName} (${data.signalType})${priceStr}${indicatorStr}`,
+        data
+      })
+    })
+
     eventSource.onerror = (error) => {
       console.error('SSE error:', error)
       setIsConnected(false)
@@ -323,6 +341,7 @@ const EventLog = memo(({ isVisible = true }) => {
       if (event.type === 'PRICE_TICK' && !filters.priceTicks) return false
       if (event.type === 'CANDLE_COMPLETED' && !filters.candles) return false
       if (event.type === 'INDICATOR_CALCULATED' && !filters.indicators) return false
+      if (event.type === 'SIGNAL' && !filters.signals) return false
 
       // Interval filters (for candles and indicators)
       if (event.type === 'CANDLE_COMPLETED' || event.type === 'INDICATOR_CALCULATED') {
@@ -376,6 +395,7 @@ const EventLog = memo(({ isVisible = true }) => {
       case 'PRICE_TICK': return 'event-tick'
       case 'CANDLE_COMPLETED': return 'event-candle'
       case 'INDICATOR_CALCULATED': return 'event-indicator'
+      case 'SIGNAL': return 'event-signal'
       case 'SYSTEM': return 'event-system'
       default: return ''
     }
@@ -386,6 +406,7 @@ const EventLog = memo(({ isVisible = true }) => {
       case 'PRICE_TICK': return '📊'
       case 'CANDLE_COMPLETED': return '🕯️'
       case 'INDICATOR_CALCULATED': return '📈'
+      case 'SIGNAL': return '🔔'
       case 'SYSTEM': return 'ℹ️'
       default: return '•'
     }
@@ -427,6 +448,14 @@ const EventLog = memo(({ isVisible = true }) => {
               onChange={e => setFilters({...filters, indicators: e.target.checked})}
             />
             <span>Indicators ({eventStats.indicators})</span>
+          </label>
+          <label className="filter-label">
+            <input
+              type="checkbox"
+              checked={filters.signals}
+              onChange={e => setFilters({...filters, signals: e.target.checked})}
+            />
+            <span>Signals ({eventStats.signals})</span>
           </label>
         </div>
 
